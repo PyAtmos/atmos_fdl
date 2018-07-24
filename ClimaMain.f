@@ -1492,10 +1492,17 @@ C
       enddo
 
 
+c WJF edit to stop Clima after convergence
+      if(DIVFrms < 1.0E-3) then
+        exit
+      endif
+c end WJF edit 
+
 ***************************************************************
 C   End of iterative loop
   40  CONTINUE
 ***************************************************************
+
       
       if(ICOUPLE.eq.1) then
        print *, 'output photo'
