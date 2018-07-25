@@ -1,7 +1,7 @@
 980.7    = G, Gravity - Earth=980.7, Mars=373.0
 1.00     = FSCALE, Solar Flux Scaling - Earth=1.0, Mars=0.43
 0.250    = ALB, Surface Albedo - Earth=0.25, Mars=0.215
-1.1E6    = ZTROP, Height of the tropopause - typically Earth=11km, Mars=15km
+1.63E6   = ZTROP, Height of the tropopause - typically Earth=11km, Mars=15km; Earth avg from Earth model = 16.3 km
 0.01     = FAR       Ar partial pressure on modern Earth  = ? for Mars
 6.371E8  = R0    Radius of Earth  - this times 0.53 for Mars (verify)
 1.013    = P0  = surface pressure of modern Earth in atm ( 0.0063 for Mars)
@@ -10,11 +10,9 @@ EARTH    = PLANET  string naming the planet for extra changes (MARS is the only 
 0        = IRESET
 13       = msun
 0        = IHZSCALE
+1.0      = uvscale
 
 -below here are not read in.  They are from Shawn's Planet.earth file but are handled differently here.
-
-IHZSCALE = set to 1 to automatically scale FSCALE to the earth-equivalent flux based on the spectral type (msun)
-(to use keep FSCALE as 1, set IHZSCALE to 1, then change your msun type; will use Kopparapu et al 2012 scalings)
 
 choices for msun (these numbers are from photgrid.f)
       msun = 12    !Gj 581 from Lucianne

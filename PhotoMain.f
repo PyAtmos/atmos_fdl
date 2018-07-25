@@ -364,6 +364,7 @@ C
       INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
       implicit real*8(A-H,O-Z)
       character*10 buffer
+      character*8 pstar
       CHARACTER*8 ISPEC, CHEMJ,SPECIES,SPECTYPE,REACTYPE,PLANET
       CHARACTER*20 string,fmtstr,fmtstr2
       real*8 mass
@@ -537,7 +538,6 @@ C - Seperating the out.dist file into seperate files
        open(66, file='PHOTOCHEM/OUTPUT/out.strctr', status='UNKNOWN')
        open(71, file='PHOTOCHEM/OUTPUT/out.aersol', status='UNKNOWN')
        open(72, file='PHOTOCHEM/OUTPUT/out.tridag', status='UNKNOWN')
-       open(15, file='PHOTOCHEM/OUTPUT/out.HR.rates', status='UNKNOWN')
 
 
 C - other model parameters read in from input_photochem.dat
@@ -669,6 +669,8 @@ C            Hardcoding woohoo! need to do N2 as well WARNING
             if (SPECTYPE.EQ.'HV') iIN=iIN+1
             if (SPECTYPE.EQ.'M') iIN=iIN+1
 
+
+            
                atomsO(iLL+iTD+iSL+iIN)=LA
                atomsH(iLL+iTD+iSL+iIN)=LB
                atomsC(iLL+iTD+iSL+iIN)=LD
@@ -951,28 +953,27 @@ c       print *, NR
 
 C ***** READ THE PLANET PARAMETER DATAFILE *****
       READ(7,502) G,FSCALE,ALB,ZTROP,FAR,R0,P0,PLANET,TIMEGA,IRESET,
-     &   msun, ihzscale
+     &   pstar, ihzscale, uvscale
 c-mab: Uncomment below for debugging with this part
 C      	print*,'G,FSCALE,ALB,ZTROP,FAR,R0 = ',G,FSCALE,ALB,ZTROP,FAR,R0
 C      	print*,'P0,PLANET,TIMEGA,IRESET = ',P0,PLANET,TIMEGA,IRESET
  502  FORMAT(F7.1/,F7.2/,F7.3/,E7.1/,F7.3/,E8.3/,F8.3/,A8/,F4.2/,I1/
-     &  ,I2/,I1/,I3/,E10.4)
+     &  ,A8/,I1/,F8.3)
 C     adding IRESET to create the atmospheric profile for modern earth
-C     gna - added msun keyword to change the star from planet.dat
-C     print *, 'msun is ', msun
+C     gna - added pstar keyword to change the star from planet.dat
+C     print *, 'pstar is ', pstar
 C     print *, 'ihzscale is ', ihzscale
 C gna-scale stellar flux based on spectral type:
 C uses Kopparapu et al 2012 scalings for earth-equivalent distance
       IF (ihzscale.eq.1) then
-         IF (msun.eq.16) FSCALE = FSCALE * 0.870
-         IF (msun.eq.17) FSCALE = FSCALE * 0.859
-         IF (msun.eq.18) FSCALE = FSCALE * 0.950
-         IF (msun.eq.19) FSCALE = FSCALE * 1.110
-         IF (msun.eq.76) FSCALE = FSCALE * 0.866
-         IF (msun.eq.21) FSCALE = FSCALE * 0.920
-         IF (msun.eq.20) FSCALE = FSCALE * 0.911
-         IF (msun.eq.22) FSCALE = FSCALE * 1890.40
-
+         IF (pstar.eq.'adleo') FSCALE = FSCALE * 0.870
+         IF (pstar.eq.'t3200') FSCALE = FSCALE * 0.859
+         IF (pstar.eq.'k2v') FSCALE = FSCALE * 0.950
+         IF (pstar.eq.'f2v') FSCALE = FSCALE * 1.110
+         IF (pstar.eq.'gj876') FSCALE = FSCALE * 0.866
+         IF (pstar.eq.'proxima') FSCALE = FSCALE * 0.920
+         IF (pstar.eq.'m8v') FSCALE = FSCALE * 0.911
+         IF (pstar.eq.'wasp12') FSCALE = FSCALE * 1890.40
          print *, 'fscale is ', fscale
       ENDIF
 
@@ -1077,13 +1078,13 @@ C sgflux, vdep, smflux, and distributed fluxes are already set
 
 C added by giada
       OPEN(unit=999, file='COUPLE/coupling_params.out')
- 909  FORMAT(1X, F4.2, 5X, F8.3, 5X, F3.1, 5X, I2, 5X, I2,
+ 909  FORMAT(1X, F4.2, 5X, F8.3, 5X, F3.1, 5X, A8, 5X, I2,
      &     9X, I4, 6X, F4.2, 6X, F7.3)
- 908  FORMAT(1X, 'timega', 6X, 'P0', 8X, 'frak', 3X, 'msun', 3X,
+ 908  FORMAT(1X, 'timega', 6X, 'P0', 8X, 'frak', 3X, 'pstar', 8X,
      &   'ihztype', 6X, 'NZ', 6X, 'FSCALE', 6X, 'G')
       print *, 'FRAK = ', frak
       print *, 'P0 = ', P0
-      print *, 'msun = ', msun
+      print *, 'pstar = ', pstar
       if(NP.eq.4) print *, 'ihztype = ', ihztype
       print *, 'NZ =', NZ
       print *, 'FSCALE = ', FSCALE
@@ -1093,7 +1094,7 @@ C added by giada
       print *, 'ihz = ', ihz
       print *, 'NP =', NP
       WRITE(999,908)
-      WRITE(999,909) timega, P0, frak, msun, ihz, NZ, FSCALE,G
+      WRITE(999,909) timega, P0, frak, pstar, ihz, NZ, FSCALE,G
 
 C
 C
@@ -1158,7 +1159,6 @@ c-mab: Note: this last adjustment only necessary if LBC = 1 for H2.
       FH = USOL(LH,1)
       FOH = USOL(LOH,1)
       FCH4 = USOL(LCH4,1)
-
 
 C  CALL below sets up vertical grid
       CALL PHOTGRID
@@ -1237,8 +1237,9 @@ c-mab: Note: Loop below is temporary....
 C    computes diffusion coefficents (K*N) and binary
 C          diffusion coefficents for H and H2
       CALL DIFCO
-      IF(PLANET.NE.'WASP12B')CALL PHOTSATRAT(JTROP,H2O)
-      IF(PLANET.EQ.'WASP12B')THEN
+      IF(PLANET.NE.'WASP12B') then
+           CALL PHOTSATRAT(JTROP,H2O)
+      else ! IF(PLANET.EQ.'WASP12B')THEN
       	DO I=1,NZ
       		P(I)=(1e-6)*PRESS(I)
       	ENDDO
@@ -1283,11 +1284,12 @@ C      !diff lim flux
 
 !gna - added coupling stuff for water here (just below tropopause)
 c-mab: Executing this only for terrestrial planets based on FH2 prevalance.
-      IF (FH2.LT.0.50) THEN
+c for VPL climate
+      IF (PLANET .NE. 'WASP12B') THEN
        do J=1,JTROP
         IF(ICOUPLE.eq.0) THEN
 C sets H2O to relative humidity in troposphere
-         USOL(LH2O,J) = H2O(J)
+         USOL(LH2O,J) = H2O(J)           
         ELSE
 C     !set to h2o from clima if coupling on
          USOL(LH2O,J) = water(J)
@@ -1330,7 +1332,7 @@ c      else
 c       NSTEPS = 10000 !the default, to allow converging runs
 c      endif
 C      Default number of steps is 50,000. The code shouldn't take nearly this long to run except hot planets.
-       NSTEPS = 10000
+       NSTEPS = 5000
 
 c-mab: nsteps = 1 recommended for initial model debugging
 c      NSTEPS = 1
@@ -1515,6 +1517,10 @@ C   To skip PHOTO
 C   Doing photo on first time step, not again until 100 seconds
       IF (N.GT.1 .AND. TIME.LT.1.E2) goto 18
 
+c     APL prevents oscillations between runs...
+      
+      call RATES
+
 
 
 C store mixing ratio of all species that take place in photolysis reactions
@@ -1583,7 +1589,7 @@ C orig       CO2(I) = FCO2
       IDO = 0
       IF (NN.EQ.NSTEPS) IDO = 1
       CALL PHOTO(ZY,AGL,LTIMES,ISEASON,IZYO2,IO2,INO,IDO,timega,frak,
-     &      msun,ihztype)
+     &      pstar,ihztype,uvscale)
 
       IF (NAQ.GT.0) CALL RAINOUT(JTROP,NRAIN,USETD)  !ok
 
@@ -2003,22 +2009,25 @@ C   HOLD H2O AND S8 CONSTANT BELOW ZTROP
 c   why am I doing this for S8?? WARNING
 c  turn it off for S8
 C  Jim apparently was prepared to do this for many species
-      DO 34 I=1,1
-        L = LH2O
-c        IF (I.EQ.2) L = LS8
-        DO 33 J=1,JTROP
-          K = L + (J-1)*NQ
-          RHS(K) = 0.
-          DO 32 M=1,NQ
-          MM = M - L + KD
-          DJAC(MM,K) = 0.
-  32    continue
-        DJAC(KD,K) = DTINV
-        DJAC(KU,K+NQ) = 0.
-        IF(J.EQ.1) GO TO 33
-        DJAC(KL,K-NQ) = 0.
-  33    continue
-  34  CONTINUE
+c-APL- Um, not if not Earth
+      if(PLANET .eq. 'EARTH') then
+         DO 34 I=1,1
+            L = LH2O
+            IF (I.EQ.2) L = LS8
+            DO 33 J=1,JTROP
+               K = L + (J-1)*NQ
+               RHS(K) = 0.
+               DO 32 M=1,NQ
+                  MM = M - L + KD
+                  DJAC(MM,K) = 0.
+ 32            continue
+               DJAC(KD,K) = DTINV
+               DJAC(KU,K+NQ) = 0.
+               IF(J.EQ.1) GO TO 33
+               DJAC(KL,K-NQ) = 0.
+ 33         continue
+ 34      CONTINUE
+      end if
 
 
 
@@ -2241,7 +2250,7 @@ C                     USOL(I,J) = USOL(I,J) + RHS(K)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         !!!!ELSEIF (USOL(I,J).LT. 1.E-15) THEN !TEMPORARILY DISABLING THIS ALTOGETHER TO USE RAVI'S CONDITIONS DIRECTLY
-        ELSEIF(PLANET.NE.'WASP12B'.AND.USOL(I,J).LT. 1.E-20) THEN !DEFAULT ATMOS CONDITION -- USING FOR NON HOT JUP PLANETS
+        ELSEIF(PLANET.NE.'WASP12B'.AND.USOL(I,J).LT. 1.E-15) THEN !DEFAULT ATMOS CONDITION -- USING FOR NON HOT JUP PLANETS
 
 c-orig        IF (USOL(I,J).LT. 1.E-20) THEN
 c        IF (USOL(I,J).LT. 1.E-22) THEN
@@ -2276,14 +2285,14 @@ C     IT DOESN'T STAY THAT WAY.)
 c-mc I don't get this. If the code works right, it shouldn't change.
 c-mc and conversly if the code doesn't work right, it should be fixed...
 c-mc test this at some point down the road WARNING
-
+c-APL Seriously? Disabling.
 C-mab: Foregoing this for giant planets since we don't fudge the values above...
-      IF(FH2.LT.0.50) THEN
-      DO 4 J=1,JTROP
-        USOL(LH2O,J) = H2O(J)
+c      IF(FH2.LT.0.50) THEN
+c      DO 4 J=1,JTROP
+c        USOL(LH2O,J) = H2O(J)
 c       USOL(LS8,J) = S8S(J)
-   4  CONTINUE
-      ENDIF
+c   4  CONTINUE
+c      ENDIF
 
 c      do i=1,nq
 c       do j=1,nz
@@ -2755,8 +2764,51 @@ c 114  format(100(1pe10.3))
 C ***** END THE TIME-STEPPING LOOP *****
 
 C Successful completion
-  22  CONTINUE
-
+ 22   CONTINUE
+      
+c     APL debugging particular reactions
+      if(1 .eq. 0) then
+      j = 1
+       do L=1,NR
+          M = jchem(1,l)
+          K = jchem(2,l)
+!     Apl print ALL for a single level (bottom)
+          if(chemj(2,l) .eq. 'HV') then
+             write(*,'(5(1a,1x),2(1pe12.4),1(1pe12.4))')
+     -            (chemj(n,l),n=1,5),
+     -            sl(m,j)/den(j),1., !usol(m,1),usol(k,1)
+     -            A(l,j)*sl(m,j)
+          else if(chemj(2,l) .eq. 'M') then
+             write(*,'(5(1a,1x),2(1pe12.4),1(1pe12.4))')
+     -            (chemj(n,l),n=1,5),
+     -            sl(m,j)/den(j),den(j), !usol(m,1),usol(k,1)
+     -            A(l,j)*sl(m,j)*den(j)
+          else
+             write(*,'(5(1a,1x),2(1pe12.4),1(1pe12.4))')
+     -         (chemj(n,l),n=1,5),
+     -         sl(m,j)/den(j),sl(k,j)/den(j),   !usol(m,1),usol(k,1)
+     -            A(l,j)*sl(m,j)*sl(k,j)
+c          if(any(chemj(:,l) .eq. 'O3') .or.
+c     -         any(chemj(:,l) .eq. 'OH') .or.
+c     -         (chemj(1,l) .eq. 'NO' .and. chemj(2,l) .eq. 'HO2') .or.
+c     -         (chemj(1,l) .eq. 'H2O' .and. chemj(2,l) .eq. 'O1D')) then
+          end if
+          if(1 .eq. 0) then
+             write(*,'(5(1a,1x))') (chemj(n,l),n=1,5)
+             write(*,'(2(1pe12.4))') sl(m,j)/den(j),
+     -            sl(k,j)/den(j) !usol(m,1),usol(k,1)
+             write(*,'(12(1pe12.4))')
+c     -               (A(L,J)*den(j)*den(j)*usol(m,j)*usol(k,j),j=1,10)
+     -            (A(l,j)*sl(m,j)*sl(k,j),j=1,10)
+          end if
+          if(chemj(1,l) .eq. 'CH4' .and. chemj(2,l) .eq. 'OH') then
+             do n=1,nz
+                write(*,'(3(1pe12.4))') sl(m,n)/den(n),
+     -               sl(k,n)/den(n),A(l,n)*sl(m,n)*sl(k,n) !usol(m,1),usol(k,1)
+             end do
+          end if
+       end do
+      end if
 
 C write out formatted CONTINUE
 C-PK Write to file used for spectrum (VPL-SMART)
@@ -2769,22 +2821,22 @@ C-PK Write to file used for spectrum (VPL-SMART)
      2 SL(LCH4,I)/DEN(I),SL(LC2H6,I)/DEN(I),SL(LCO2,I)/DEN(I),
      & SL(LO2,I)/DEN(I),O3(I),
      3 USOL(LCO,I),USOL(LH2CO,I),SL(LHNO3,I)/DEN(I),
-     4 USOL(LNO2,I),USOL(LSO2,I),USOL(LOCS,I),I=1,NZ)
+     4 USOL(LNO2,I),USOL(LSO2,I),USOL(LN2O,I),I=1,NZ)
  938  FORMAT(1x,'    Alt      Temp       Den      Press      H2O ',
      2        '      CH4      C2H6       CO2      O2         O3  ',
      3        '      CO       H2CO       HNO3     NO2        SO2',
-     4        '      OCS ')
+     4        '      N2O')
 
       WRITE(67,738)
       WRITE(67,941) (Z(I),T(I),DEN(I),PRES_bar(I),USOL(LH2O,I),
      2 SL(LCH4,I)/DEN(I),SL(LC2H6,I)/DEN(I),SL(LCO2,I)/DEN(I),
      & SL(LO2,I)/DEN(I),O3(I),
      3 USOL(LCO,I),USOL(LH2CO,I),SL(LHNO3,I)/DEN(I),
-     4 USOL(LNO2,I),USOL(LSO2,I),USOL(LOCS,I),I=1,NZ)
+     4 USOL(LNO2,I),USOL(LSO2,I),USOL(LN2O,I),I=1,NZ)
  738  FORMAT(1x,'    Alt      Temp       Den      Press      H2O ',
      2        '      CH4      C2H6       CO2      O2         O3  ',
      3        '      CO       H2CO       HNO3     NO2        SO2',
-     4        '      OCS ')
+     4        '      N2O')
 
 
  937  FORMAT(1X,1P16E10.3)
@@ -2794,11 +2846,11 @@ C-PK Write to file used for spectrum (VPL-SMART)
      & SL(LCO2,I)/DEN(I),SL(LCO,I)/DEN(I),SL(LC2H6,I)/DEN(I),
      & SL(LH2CO,I)/DEN(I),
      & USOL(LCH4,I),USOL(LHNO3,I),USOL(LNO2,I),USOL(LO2,I),O3(I),
-     & USOL(LSO2,I),USOL(LH2O,I),USOL(LOCS,I),I=1,NZ)
+     & USOL(LSO2,I),USOL(LH2O,I),USOL(LN2O,I),I=1,NZ)
  939  FORMAT(1X,'    Alt      Temp       Den      Press      CO2 ',
      2       '       CO       C2H6       H2CO     CH4        HNO3',
      3       '       NO2      O2         O3       SO2        H2O ',
-     4        '      OCS ')
+     4        '      N2O')
  940  FORMAT(1X,1P16E10.3)
 
 

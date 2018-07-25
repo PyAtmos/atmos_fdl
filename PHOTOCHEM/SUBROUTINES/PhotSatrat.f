@@ -42,7 +42,8 @@ C
 C   CALCULATE TROPOSPHERIC H2O CONCENTRATIONS
       DO 3 J=1,JTROP
       if (PLANET .EQ. 'EARTH') then 
-       REL = 0.77 * (P(J)/PS - 0.02)/0.98   !manabe formula
+         REL = 0.7 * (P(J)/PS - 0.02)/0.98 !manabe formula ! APL was 0.77 * ... - 0.02 / 0.98
+c         print *,j,rel
 
        
 c       REL = 1.0 ! Saturated troposphere - eventual should abstract this and ATACAMA
@@ -57,8 +58,20 @@ c      REL = 0.12                         ! 7 microns
        REL= 1.e-8 ! For H2O-free atmospheres. Set above zero to prevent floating point errors. - EWS - 9/14/2015
       endif   
 
-      RELH(J) = REL 
-   3  H2O(J) = REL * H2OSAT(J)
+      RELH(J) = REL
+      H2O(J) = REL * H2OSAT(J)
+ 3    continue
+
+c **** APL Condense ONLY if > H2OSAT at any level
+c
+      if(planet .eq. 'VENUS') then
+         do 10 j=1,nz
+            if(H2O(j) .gt. H2OSAT(j)) then
+               H2O(j) = H2OSAT(j)
+               RELH(j) = H2O(j)/h2osat(j)
+            end if
+ 10      continue
+      end if
 C
 
 

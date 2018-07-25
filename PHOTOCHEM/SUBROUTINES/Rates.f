@@ -3,9 +3,11 @@
       implicit real*8(A-H,O-Z)
       CHARACTER*8 REACTYPE,PLANET,CHEMJ
       real*8 mass
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/BBLOK.inc'
       INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PHOTABLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/NBLOK.inc'
       INCLUDE 'PHOTOCHEM/DATA/INCLUDE/RBLOK.inc'
-      real*8 k0,kinf
+      real*8 k0,kinf,tpow
 
 c-mc rate constant units are cm^3/mol/s
        ! chemical reaction file
@@ -36,7 +38,7 @@ c-mc rate constant units are cm^3/mol/s
            !read in Arhenius and Temperature factor (note TFAC contains the negative sign. not standard practice)
                      read (9,669) alpha_0,beta_0,gamma_0,f_0,g_0
                       do i=1,nz
-                       A(J,I) = alpha_0 * EXP (beta_0/T(I))
+                         A(J,I) = alpha_0 * EXP (beta_0/T(I))
                       enddo
            ! Read in three body reaction rates
                   else if (REACTYPE(J) .EQ. '3BODY') then        
@@ -55,15 +57,23 @@ c-mc rate constant units are cm^3/mol/s
 
              else   ! if kida <> 1 then proceed with the old school reactions.rx read ins.
 C READ IN TWO BODY REACTION RATES
-          if (REACTYPE(J) .EQ. '2BODY') then
+             if (REACTYPE(J) .EQ. '2BODY') then
            !read in Arhenius and Temperature factor (note TFAC contains the negative sign. not standard practice)
-           read (9,667) ARH, TFAC
+                read (9,667) ARH, TFAC
 
 
-          do i=1,nz
-            A(J,I) = ARH * EXP (TFAC/T(I))   !two body reaction rates
-           enddo
+                do i=1,nz
+                   A(J,I) = ARH * EXP (TFAC/T(I)) !two body reaction rates
+                enddo
 
+c READ IN TWO BODY, 3-PARAMETER REACTION RATES ! APL; many reactions could replace WEIRD with this
+             else if (REACTYPE(J) .eq. '2BD3P') then
+                read (9,668) ARH,TFAC,TPOW ! read in A, Ea, n
+
+                do i=1,nz
+                   A(J,I) = ARH * (T(I)/298.)**TPOW * exp(TFAC/T(I))
+                end do
+                         
 C READ IN THREE BODY REACTION RATES
           else if (REACTYPE(J) .EQ. '3BODY') then
              read(9,668) B,C,D,E          !read in K0, Kinf, T0exp, Tinfexp
@@ -74,8 +84,9 @@ c             print *, J, B,C,D,E
              endif
              do i=1,nz
               A(J,I)= TBDY(B,C,D,E,T(I),DEN(I))  !computed three body reaction rate
-             enddo
+           enddo
 
+           
 C SPECIFY 'WEIRD' REACTION RATES
 C  FILL UP WEIRD RATE CONSTANTS
 c-mc the below are rate constants which don't fit in the 2BODY or 3BODY category
@@ -87,38 +98,93 @@ c-mc the below are rate constants which don't fit in the 2BODY or 3BODY category
 
 !   H2 + O -> OH + H
       if (CHEMJ(1,J) .EQ. 'H2' .AND. CHEMJ(2,J) .EQ. 'O') THEN
-       A(J,I) = 1.34E-15*(T(I)/298.)**6.52 *EXP(-1460./T(I))   ! Low T fit NIST 05
+c     A(J,I) = 1.34E-15*(T(I)/298.)**6.52 *EXP(-1460./T(I))   ! Low T fit NIST 05
+         A(J,I) = 6.34E-12*exp(-4000/T(i)) + 1.46e-9*exp(-9650/T(i)) ! NIST 05
       endif
+
+!   H2O2 -> OH + OH
+      if (CHEMJ(1,J).EQ.'H2O2'.AND.CHEMJ(2,J).EQ.'HV') THEN
+       !  NIST / Tsang & Hampson, 1986 APL
+       A(J,I) = 2.03E-3 * (T(I)/298.)**(-4.86) * exp(-26800./T(i))
+      endif
+
+!   HO2 + O3 -> 2O2 + OH
+      if (CHEMJ(1,J).EQ.'HO2'.AND.CHEMJ(2,J).EQ.'O3') THEN
+       !NIST / Atkinson et al [2004]
+       A(J,I) = 1.97E-16* (T(I)/298.)**4.57 * EXP(693./T(I))
+      endif      
 
 !   HO2 + HO2 -> H2O2 + O2
       if (CHEMJ(1,J).EQ.'HO2'.AND.CHEMJ(2,J).EQ.'HO2') THEN
-       !JPL-02
-       A(J,I) = 2.3E-13*EXP(590./T(I)) + 1.7E-33*EXP(1000./T(I))*DEN(I)
+       !JPL-15
+       A(J,I) = 3.0E-13*EXP(460./T(I)) + 2.1E-33*EXP(920./T(I))*DEN(I)
+      endif
+
+!   H2O2 + OH -> HO2 + H2O      
+      if (CHEMJ(1,J).EQ.'OH'.AND.CHEMJ(2,J).EQ.'H2O2') THEN
+c NIST custom-compiled 3-parameter fit to:
+c 2004ATK/BAU1461-1738
+c 2010HON/COO5718-5727
+c     2003VAK/MCC10642-10647
+         A(J,I) = 2.47E-13*(T(I)/298.)**2.1 * EXP(627./T(I))
       endif
 
 !   O + O + M -> O2 + M
       if (CHEMJ(1,J).EQ.'O'.AND.CHEMJ(2,J).EQ.'O') THEN
          JOO_O2=J  !this is used below in S+S->S2
          !note - re-hard coding into S+S->S2 evil I know...
-       A(J,I) = 9.46E-34*EXP(480./T(I))*DEN(I)  ! NIST 05 low Temp in N2.  Its 2x bigger in H2 or O2
+       A(J,I) = 6.0E-34*(300./T(i))**2.6 * DEN(I)  ! NIST 05 low temp in O2/N2
       endif
 
-!   CO + OH -> CO2 + H (also CS + HS -> CS2 + H)  !SORG
-      if ((CHEMJ(1,J).EQ.'CO'.AND.CHEMJ(2,J).EQ.'OH') .OR.
-     $    (CHEMJ(1,J).EQ.'CS'.AND.CHEMJ(2,J).EQ.'HS')) THEN
+!   O + O2 + M -> O3 + M
+      if (CHEMJ(1,J).EQ.'O'.AND.CHEMJ(2,J).EQ.'O2') THEN
+       A(J,I) = 5.12E-34*(298./T(i))**2.6 * DEN(I) * exp(40.5/t(i))  ! NIST 05 combination fit
+      endif
+      
+      
+!    O2 -> O + O  ! APL Tsang+Hampson 1986; 300-2500 K      
+      if(chemj(1,j) .eq. 'O2' .and. chemj(2,j) .eq. 'HV') then
+         A(j,i) = 1.01E-08*(298./t(i))*exp(-59400/t(i))
+      end if
+
+!     CO + OH -> CO2 + H (also CS + HS -> CS2 + H)  !SORG
+!     NIST 3-parameter fit to:
+c     1992BAU/COB411-429
+c     1984WAR197C
+c     2007LI/ZHA109-136      
+      if (CHEMJ(1,J).EQ.'CO'.AND.CHEMJ(2,J).EQ.'OH') THEN
+!     A(J,I) = 4.3E-14 * (T(i)/298.)**1.5 * exp(327./T(I)) ! reviews
+!     A(J,I) = 5.4E-14 * (T(i)/298.)**1.5 * exp(250./T(I))
+!     A(J,I) = 1.63E-13 * (T(i)/298.)**0.8 * exp(-36.41/T(I)) ! CO       OH       CO2      H                   1.0232E-07  1.3640E-13  1.1728E+06
+         A(J,i) = 2.81E-13 * exp(-176./T(I)) ! Frost et al 1993, 138-296 K
+!        A(J,I) = 5.15E-13* exp(327./T(I))  ! simpler for test
+      endif
+
+!     CS + HS -> CS2 + H  !SORG      
+      if (CHEMJ(1,J).EQ.'CS'.AND.CHEMJ(2,J).EQ.'HS') THEN
        PATM = DEN(I)*1.38E-16*T(I)/1.013E6   !a good pressure
        A(J,I) = 1.5E-13 * (1. + 0.6*PATM)     !JPL-02
       endif
 
 !   CO + O + M -> CO2 + M
       if (CHEMJ(1,J).EQ.'CO'.AND.CHEMJ(2,J).EQ.'O') THEN
-       A(J,I) = 2.2E-33*EXP(-1780./T(I))*DEN(I)  ! I use NIST 05 for 257-277 K
+c         A(J,I) = 2.2E-33*EXP(-1780./T(I))*DEN(I) ! I use NIST 05 for 257-277 K
+         A(J,I) = 1.6e-32*exp(-2184./T(I))*DEN(I) ! Gao et al, 2015
       endif
 
-!gna - updated according to d-g 2011
-!   H + CO + M -> HCO + M (also H + CS + M -> HCS + M) !sorg
-      if ((CHEMJ(1,J).EQ.'H'.AND.CHEMJ(2,J).EQ.'CO') .OR.
-     $    (CHEMJ(1,J).EQ.'H'.AND.CHEMJ(2,J).EQ.'CS')) THEN
+
+!   H + CO + M -> HCO + M
+      if (CHEMJ(1,J).EQ.'H'.AND.CHEMJ(2,J).EQ.'CO') then
+!     2-param fit to :
+c      1994BAU/COB847-1033
+c      1986TSA/HAM1087
+c      1984WAR197C
+         A(J,I) = 1.0E-33*EXP(-629./T(I))*DEN(I)
+      endif
+      
+!      H + CS + M -> HCS + M ! sorg
+      !gna - updated according to d-g 2011
+      if (CHEMJ(1,J).EQ.'H'.AND.CHEMJ(2,J).EQ.'CS') THEN
        A(J,I) = 2.0E-33*EXP(-850./T(I))*DEN(I)  ! I use NIST 05 for 333-1000 K, theory
       endif
 
@@ -131,6 +197,17 @@ c-mc the below are rate constants which don't fit in the 2BODY or 3BODY category
       if (CHEMJ(1,J).EQ.'H'.AND.CHEMJ(2,J).EQ.'H') THEN
        A(J,I) = 8.85E-33*(T(I)/287)**(-0.6) * DEN(I)  !gna Baluch 1994
       endif
+
+!   CH3O + NO -> H2CO + HNO
+      if (CHEMJ(1,J).EQ.'CH3O'.AND.CHEMJ(2,J).EQ.'NO') THEN
+       A(J,I) = 4.0E-12*(298./T(I))**0.7*DEN(I)     ! Atkinson et al 1997 review
+      endif
+     
+!   CH3O -> H2CO + H
+      if (CHEMJ(1,J).EQ.'CH3O'.AND.CHEMJ(2,J).EQ.'HV') THEN
+       A(J,I) = 4.88E-05*(298./T(I))**2.5 * EXP(-17200./T(I))     ! Tsang [1987] NIST
+      endif
+
 
 !   H + OH + M -> H2O + M
       if (CHEMJ(1,J).EQ.'H'.AND.CHEMJ(2,J).EQ.'OH') THEN
@@ -171,7 +248,7 @@ c       A(J,I) = 1.25E-32                   !NIST 2005
         AK0 = 2.4E-14*EXP(460./T(I))
         AK2 = 2.7E-17*EXP(2199./T(I))
         AK3M = 6.5E-34*EXP(1335./T(I))*DEN(I)
-       A(J,I) = AK0 + AK3M/(1. + AK3M/AK2)  !JPL-06
+       A(J,I) = AK0 + AK3M/(1. + AK3M/AK2)  !JPL-15
       endif
 
 !   H + HNO  ->  H2 + NO
@@ -187,6 +264,11 @@ c       A(J,I) = 1.25E-32                   !NIST 2005
 !   SO + O -> SO2
       if (CHEMJ(1,J).EQ.'SO'.AND.CHEMJ(2,J).EQ.'O') THEN
        A(J,I) = 6.0E-31 * DEN(I)         ! NIST 2005 updated from D-G 2011 gna
+      endif
+
+!    SO3 + H2O + H2O -> H2SO4 + H2O ! Krasnopolsky 2012 APL
+      if (CHEMJ(1,J).EQ.'SO3'.AND.CHEMJ(2,J).EQ.'H2O') THEN
+         A(J,I) = 2.3E-43*T(I)*exp(6540./T(i))*DEN(I)*USOL(LH2O,I)
       endif
 
 !    S + S -> S2
@@ -223,7 +305,7 @@ c       A(J,I) = min(5.E-11, 3* A(JOO_O2,I))      ! reported rate is 3X larger f
 
 !     S + CO + M -> OCS + M
       if (CHEMJ(1,J).EQ.'S'.AND.CHEMJ(2,J).EQ.'CO') THEN
-       A(J,I) = 1.*2.2E-33*EXP(-1780./T(I))*DEN(I)  ! no information
+       A(J,I) = 4.0E-33*EXP(-1780./T(I))*DEN(I)  ! Zhang+ [2012] APL
 c  I'm guessing that S + CO goes at about the same rate as O + CO
 c  with the same activation energy and a 3X bigger A factor
 c-mc but yet factor of 1 out from, so this is the same as o+co
@@ -557,7 +639,7 @@ c       print *, I, A(J,I),Alow,Ainf,T(I),DEN(I)
 !in reactions list as "WEIRD" but wasn't here...
       if ((CHEMJ(1,J).EQ.'SO'.AND.CHEMJ(2,J).EQ.'HCO'.AND.
      $    CHEMJ(3,J).EQ.'HSO') )THEN
-      A(J,I) = 5.6E-12 *  * (T(I)/298.)**0.4    ! Kasting 1990
+      A(J,I) = 5.6E-12 *  * (T(I)/298.)**(-0.4)    ! Kasting 1990
       endif
 
 !gna

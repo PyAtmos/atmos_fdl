@@ -1,5 +1,5 @@
       SUBROUTINE PHOTO(ZY,AGL,LTIMES,ISEASON,IZYO2,IO2,INO,N,timega,
-     $                 frak,msun,ihztype)
+     $                 frak,pstar,ihztype,uvscale)
       INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
       implicit real*8(A-H,O-Z)
       real*8 mass
@@ -8,6 +8,7 @@
 c      real*8 temp(kj) !EWS - not used
       character*8 REACTYPE,PLANET,CHEMJ,ISPEC
       CHARACTER*20 fmtstr
+      character*8 pstar
       CHARACTER*11 photolabel, AA
       DIMENSION D0(2)
       dimension LLNO(35)
@@ -50,7 +51,9 @@ c- this used only if INO=0
 !compute mean molar mass (this could easily be abstracted so that N2 isn't hardcoded...
 
       pO2=USOL(LO2,1)  !assumes atmosphere has O2 in it
-      pCO2=FCO2  !and CO2
+      pCO2=FCO2                 !and CO2
+
+
 
 
 c-mab: Like DENSTY & DIFCO, WT expression based on H2 mixing ratio...
@@ -137,14 +140,14 @@ c - note that columndepth is indexed by photoreac so contains duplicate informat
 c (i.e. columndepth(1,*) and (2,*)  are both the O2 column depth (assuming O2 is the first photoreaction)
 
       IF(LTIMES .EQ. 0) then
-        CALL INITPHOTO(sq,columndepth,ZY,nw,timega,IO2,msun)
+        CALL INITPHOTO(sq,columndepth,ZY,nw,timega,IO2,pstar,uvscale)
  !this subroutine returns sq(nj,nz,nw) = cross section * quantum yield for each
  ! photolysis reaction at each height for each wavelength
 ! it also specifies the wavelength grid and the flux
 
 c GNA
        !if (frak.eq.0) then
-         CALL INITMIE(nw,wavl,frak,ihztype)
+         CALL INITMIE(nw,wavl,frak,ihztype, lgrid)
         ! else
         !CALL INITMIEFRAC(nw,wavl,frak)
       !endif
@@ -165,11 +168,13 @@ c-mc the following two sections require debugging before use...
 c-mab  print*,'JNO',JNO !debugging for templates w/o NO photolysis
 
       CALL XS('O2      ',nw,wavl,wav,T,DEN,JO2_O1D,sq,columndepth,zy,
-     $         IO2)
+     $         IO2,lgrid)
 
-      CALL XS('O3      ',nw,wavl,wav,T,DEN,JO3_O1D,sq,columndepth,zy)
-
-      CALL XS('NO      ',nw,wavl,wav,T,DEN,JNO,sq,columndepth,zy)
+      CALL XS('O3      ',nw,wavl,wav,T,DEN,JO3_O1D,sq,columndepth,zy,
+     $     IO2,lgrid)
+      
+      CALL XS('NO      ',nw,wavl,wav,T,DEN,JNO,sq,columndepth,zy,
+     $     IO2,lgrid)
 
        !put in calls to other P/T dependent cross sections here...
        !also note that above/below calls to NO and O2 should only be called if IO2=0,INO=0
@@ -187,9 +192,10 @@ C    REPEAT THIS SECTION ONLY IF SOLAR ZENITH ANGLE OR O2 VARIES WITH TIME
        JNO=minloc(photoreac,1,ISPEC(INT(photoreac)).eq.'NO     ')
 c-mab  print*,'JNO',JNO !debugging for templates w/o NO photolysis
       CALL XS('O2      ',nw,wavl,wav,T,DEN,JO2_O1D,sq,columndepth,zy,
-     $        IO2)
+     $        IO2,lgrid)
 
-      CALL XS('NO      ',nw,wavl,wav,T,DEN,JNO,sq,columndepth,zy)
+      CALL XS('NO      ',nw,wavl,wav,T,DEN,JNO,sq,columndepth,zy,
+     $         IO2,lgrid)
 
       endif
 
@@ -206,7 +212,7 @@ c - consider some IF's here, but this would also entail changing the output file
        !note this is for the O2 + Hv -> O + O reaction,which is the second O2 reaction
       endif
 
-      if (INO.LE.2) then  !used if INO=0 or INO=1 - on JPL grid only... !actually for now using in high res too...
+      if (INO.NE. 2) then  ! not using prates file
        JNO=minloc(photoreac,1,ISPEC(INT(photoreac)).eq.'NO     ')
 c-mab  print*,'JNO',JNO !debugging for templates w/o NO photolysis
       endif
@@ -459,7 +465,7 @@ C              frederick and hudson (1979)
              RN2 = DIJ/(ALNO + DIJ + QKNO*DEN(I))
              prates(JNO,I)=prates(JNO,I)+ 0.5*D0(NOL)*S(I)*RN2*AGL*ALP
            enddo
-         ELSE
+        ELSE if(ino .eq. 0) then
 C            frederick and allen method (effective cross sections)
            do I=1,NZ
             prates(JNO,I)=prates(JNO,I) + FLX*SIGNO(I,NOL)*S(I)
@@ -470,7 +476,7 @@ C            frederick and allen method (effective cross sections)
 
       endif !end NO wavlength loop
 
-      else  !end if loop which restricts this behavior to INO=0 or INO=1
+      else  if (ino .eq. 2) then !end if loop which restricts this behavior to INO=0 or INO=1
 !so ww get here if INO=2
 !for now just use the NO photo rate generated from the band model, even at high res (Jim's suggestion)
 !the below is dumb - it should be removed from the wavelength loop to make it more clear...
@@ -581,8 +587,7 @@ c orig      STAU=Z(MAXLOC(SALL,2, SALL .le. slev))/1e5   !original code not in l
       enddo
 
       write(48,322) (STAU(L), L=1,nw) !write out tau=1 heights for the time-dependent codes
-
- 322  format(118(F10.3))  !ACK a hardcoded wavelength grid
+ 322  format(1(F10.3))
 
 
 !print cross sections - should disable for production runs
