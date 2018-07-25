@@ -24,7 +24,7 @@ SRFALB=    0.316                !fixed planetary albedo (0.2)
 SOLCON=    1.0	  	        !SOLCON=S/So (0.3225 = 0.75*0.43)  use 0.43 for present day mars, .2844 for GJ581d,22.49 unscaled --> when coupled it reads this in from photo
 dtmax=     1.e4
 CO2MAX=    3.55e-2
-IMET=      0                    ! Methane flag. If "1" then methane is turned on. (does not turn on ethane)
+IMET=      1                    ! Methane flag. If "1" then methane is turned on. (does not turn on ethane)
 IMETETH=   0                    ! ethane flag.  If 1 then both methane and ethane turned on
 nga=       6
 IHAZE=     0
