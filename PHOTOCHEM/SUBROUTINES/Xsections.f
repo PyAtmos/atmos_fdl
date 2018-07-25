@@ -1,4 +1,5 @@
-      SUBROUTINE XS(species,nw,wavl,wav,T,DEN,j,sq,columndepth,zy,IO2)
+      SUBROUTINE XS(species,nw,wavl,wav,T,DEN,j,sq,columndepth,zy,IO2,
+     -     lgrid)
       INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
       implicit real*8(A-H,O-Z)
       character*8 species
@@ -17,25 +18,62 @@
       Jd=3
 !---------------------------------------------------------------------------!
 
-!---------EWS NOTE: I have removed unnecessary variables to avoid compilation warnings---!
 !---------EWS NOTE: Find original call formatting below update---------------------------!
 !---------EWS NOTE: nw=nw, wl=wavl, wc=wav, tlev=T, airlev=DEN,jn=j, sq=sq---------------!
 !----------------------------Comments Correspond to line below---------------------------!
-      !T dependent - also unexplained factor of 1000. (but not using T-dependent data right now)
-      IF(species.eq.'HNO3    ') CALL XS_HNO3(nw,wavl,T,j,sq) 
+
+      if(lgrid .eq. 2) then ! APL very high resolution grid with updated xsec, mostly into FUV (resolves SED bands better)
+         IF(species.eq.'HNO3    ') CALL XS_HNO3_alinc(nw,wavl,T,j,sq)
+         IF(species.eq.'NO2     ') CALL XS_NO2_alinc(nw,wavl,j,sq)
+         IF(species.eq.'H2O2    ') CALL XS_H2O2_alinc(nw,wavl,T,j,sq)
+         IF(species.eq.'H2O     ') CALL XS_alinc(species,nw,wavl,j,sq)
+         IF(species.eq.'CO2     ') CALL XS_CO2_alinc(nw,wavl,j,sq)
+         IF(species.eq.'H2CO    ') CALL XS_H2CO_alinc(nw,wavl,wav,j,sq)
+         IF(species.eq.'O3      ') CALL XS_O3_alinc(nw,wavl,T,j,sq)
+         IF(species.eq.'N2O     ') CALL XS_N2O_alinc(nw,wavl,wav,T,j,sq)
+         IF(species.eq.'CH3OOH  ') CALL XS_alinc(species,nw,wavl,j,sq)
+         IF(species.eq.'N2O5    ') CALL XS_N2O5_alinc(nw,wavl,j,sq)
+         IF(species.eq.'O2      ') CALL XS_O2_alinc(nw,wavl,j,sq)
+         IF(species.eq.'NO      ') CALL XS_NO_alinc(nw,wavl,j,sq)
+         IF(species.eq.'OCS     ') CALL XS_alinc(species,nw,wavl,j,sq)
+         IF(species.eq.'SO2     ') CALL XS_SO2_alinc(nw,wavl,j,sq)
+         IF(species.eq.'SO3     ') CALL XS_alinc(species,nw,wavl,j,sq)
+         IF(species.eq.'H2S     ') CALL XS_alinc(species,nw,wavl,j,sq)
+         IF(species.eq.'S4      ') CALL XS_S4(nw,wavl,j,sq)
+         IF(species.eq.'S3      ') CALL XS_S3(nw,wavl,j,sq)
+      else ! band model
+         IF(species.eq.'HNO3    ') CALL XS_HNO3(nw,wavl,T,j,sq)
+         IF(species.eq.'NO2     ') CALL XS_NO2(nw,wavl,T,j,sq)
+         IF(species.eq.'H2O2    ') CALL XS_H2O2(nw,wavl,wav,T,j,sq)
+         IF(species.eq.'H2O     ') CALL XS_H2O(nw,wavl,wav,j,sq)
+         IF(species.eq.'CO2     ') CALL XS_CO2(nw,wavl,j,sq)
+         IF(species.eq.'H2CO    ') CALL XS_H2CO(nw,wavl,j,sq)
+         IF(species.eq.'O3      ') CALL XS_O3(nw,wavl,T,j,sq)
+         IF(species.eq.'N2O     ') CALL XS_N2O(nw,wavl,wav,T,j,sq)
+         IF(species.eq.'CH3OOH  ') CALL XS_CH3OOH(nw,wavl,j,sq)
+         !returns NO3 + NO2, then NO3 + NO + O  (temperature dependent!)
+         IF(species.eq.'N2O5    ') CALL XS_N2O5(nw,wavl,wav,T,j,sq)
+         !returns O + O(1D) then O + O
+         IF(species.eq.'O2      ') CALL XS_O2(nw,wavl,T,DEN,j,sq,
+     $        columndepth,zy,IO2)
+         IF(species.eq.'NO      ') CALL XS_NO(T,DEN,j,columndepth)
+         IF(species.eq.'OCS     ') CALL XS_OCS(nw,wavl,j,sq)         
+         !returns SO + O, SO21, SO23
+         IF(species.eq.'SO2     ') CALL XS_SO2(nw,wavl,j,sq)
+         IF(species.eq.'SO3     ') CALL XS_SO3(nw,wavl,j,sq)
+         IF(species.eq.'H2S     ') CALL XS_H2S(nw,wavl,j,sq)
+         !note using S2 cross section for S4
+         IF(species.eq.'S4      ') CALL XS_S2(nw,wavl,j,sq,Jb)
+         !note using S2 cross section for S3
+         IF(species.eq.'S3      ') CALL XS_S2(nw,wavl,j,sq,Jc)
+      end if
+
+      IF(species.eq.'CH3O2   ') CALL XS_alinc(species,nw,wavl,j,sq)
+      IF(species.eq.'H2SO4   ') CALL XS_alinc(species,nw,wavl,j,sq)
+      if(species .eq. 'HNO2    ') call xs_alinc(species,nw,wavl,j,sq)
+      if(species .eq. 'NH3     ') call xs_NH3_alinc(nw,wavl,j,sq)
+
       IF(species.eq.'HO2     ') CALL XS_HO2(nw,wavl,wav,j,sq,Ja)
-      !T-dependent (not in use)   
-      IF(species.eq.'NO2     ') CALL XS_NO2(nw,wavl,T,j,sq)
-      !T-dependent (not in use) 
-      IF(species.eq.'H2O2    ') CALL XS_H2O2(nw,wavl,wav,T,j,sq)
-      !HAVEN"T INTEGRATED GRACES CODE
-      IF(species.eq.'H2O     ') CALL XS_H2O(nw,wavl,wav,j,sq)
-      !returns CO+O to j and CO+O1D j+3 !ACK hardcoded needs fixing.. 
-      IF(species.eq.'CO2     ') CALL XS_CO2(nw,wavl,j,sq)
-      !returns H2, then HCO  
-      IF(species.eq.'H2CO    ') CALL XS_H2CO(nw,wavl,j,sq)
-      !returns O2 + O(1D), then O2 + O(3P)
-      IF(species.eq.'O3      ') CALL XS_O3(nw,wavl,T,j,sq)
       IF(species.eq.'CH4     ') CALL XS_CH4(nw,wavl,j,sq)
       !returns  2 (3)CH2 +H2 then CH4 + (1)CH2  
       IF(species.eq.'C2H6    ') CALL XS_C2H6(nw,wavl,j,sq)
@@ -43,7 +81,6 @@
       !note NO3 is temperature dependent so would need to change if it does...
       IF(species.eq.'NO3     ') CALL XS_NO3(nw,wavl,T,j,sq)
       !returns N2 + O1D
-      IF(species.eq.'N2O     ') CALL XS_N2O(nw,wavl,wav,T,j,sq)
       !returns OH + CL
       IF(species.eq.'HOCL    ') CALL XS_HOCL(nw,wavl,j,sq)
       !returns CL + CL (temp dependent)
@@ -71,15 +108,12 @@
       IF(species.eq.'CH3O2NO2') CALL XS_CH3O2NO2(nw,wavl,j,sq)
       !returns CH3O + CL 
       IF(species.eq.'CH3OCL  ') CALL XS_CH3OCL(nw,wavl,j,sq)
-      IF(species.eq.'CH3OOH  ') CALL XS_CH3OOH(nw,wavl,j,sq)
       !returns CL + O1D and CL + O
       IF(species.eq.'CLO     ') CALL XS_CLO(nw,wavl,j,sq)
       !returns CL + NO3, then CLO + NO2 (temperature dependent!)
       IF(species.eq.'CLONO2  ') CALL XS_CLONO2(nw,wavl,wav,T,j,sq)
       !returns, HO2 + NO2, then OH + NO3
       IF(species.eq.'HO2NO2  ') CALL XS_HO2NO2(nw,wavl,j,sq)
-      !returns NO3 + NO2, then NO3 + NO + O  (temperature dependent!)
-      IF(species.eq.'N2O5    ') CALL XS_N2O5(nw,wavl,wav,T,j,sq)
       !returns CL + CLOO, then CLO + CLO 
       IF(species.eq.'CL2O2   ') CALL XS_CL2O2(nw,wavl,j,sq)
       !returns CL + CLO
@@ -90,27 +124,15 @@
       IF(species.eq.'CL2O4   ') CALL XS_CL2O4(nw,wavl,j,sq)
       !returns H + CL. 
       IF(species.eq.'HCL     ') CALL XS_HCL(nw,wavl,j,sq)
-      !returns O + O(1D) then O + O
-      IF(species.eq.'O2      ') CALL XS_O2(nw,wavl,T,DEN,j,sq,
-     $                                     columndepth,zy,IO2)
       !returns  signo(I,L) for now 
-      IF(species.eq.'NO      ') CALL XS_NO(T,DEN,j,columndepth)  
       IF(species.eq.'SO      ') CALL XS_SO(nw,wavl,j,sq)
-      IF(species.eq.'OCS     ') CALL XS_OCS(nw,wavl,j,sq)
-      !returns SO + O, SO21, SO23
-      IF(species.eq.'SO2     ') CALL XS_SO2(nw,wavl,j,sq)
-      IF(species.eq.'SO3     ') CALL XS_SO3(nw,wavl,j,sq)
-      IF(species.eq.'H2S     ') CALL XS_H2S(nw,wavl,j,sq)
       !returns SS8L then SS8R
       IF(species.eq.'S8      ') CALL XS_S8(nw,wavl,j,sq)
       !note using HO2 cross section for HSO
       IF(species.eq.'HSO     ') CALL XS_HO2(nw,wavl,wav,j,sq,Jb)
       !note this contains an unphysical scaling factor
       IF(species.eq.'S2      ') CALL XS_S2(nw,wavl,j,sq,Ja)
-      !note using S2 cross section for S4
-      IF(species.eq.'S4      ') CALL XS_S2(nw,wavl,j,sq,Jb)
-      !note using S2 cross section for S3
-      IF(species.eq.'S3      ') CALL XS_S2(nw,wavl,j,sq,Jc)
+
 !sorg species
       IF(species.eq.'CS2    ') CALL XS_CS2(nw,wavl,j,sq)
       IF(species.eq.'CH3SH  ') CALL XS_CH3SH(nw,wavl,j,sq)
@@ -118,7 +140,7 @@
 !below here there are calls to XS_simple.
       IF(species.eq.'C2H6S  ')CALL XS_simple(species,nw,wavl,j,sq)   
       IF(species.eq.'C2H6S2 ')CALL XS_simple(species,nw,wavl,j,sq)
-
+      
 !corg species
       IF(species.eq.'C2H2    ') CALL XS_C2H2(nw,wavl,j,sq) 
       IF(species.eq.'C2H4    ') CALL XS_C2H4(nw,wavl,j,sq,Ja)
@@ -140,6 +162,145 @@ c       CALL XS_CHOCHO(nw,wavl,wav,T,DEN,100,sq,101,102)  !ACK - hardcoded "J-nu
 
       RETURN
       END
+
+            SUBROUTINE XS_HNO3_alinc(nw,wl,tlev,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for HNO3 photolysis =*
+*=       HNO3 + HV -> OH + NO2                                               =*
+*=       HNO3 + HV -> HNO2 + O(3P)                                           =*
+*=       HNO3 + HV -> HNO2 + O(1D)                                           =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*=  Quantum yield:  Rough estimates based on summary in JPL-15               =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1)
+      REAL*8 tlev(nz)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata), btemp(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw), bg(nw)
+      REAL*8 qy(3,nw)
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+
+      ierr = 0
+
+
+**************** HNO3 photodissociation
+
+*=       HNO3 + HV -> OH + NO2      
+*=       HNO3 + HV -> HNO2 + O(3P)  
+*=       HNO3 + HV -> HNO2 + O(1D)
+      
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/HNO3/HNO3_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i),Btemp(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)
+
+c     interpolate temp data if needed
+      CALL inter2(nw+1,wl,bg,n1,x1,btemp,ierr)       
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_HNO3_alinc***'
+         STOP
+      ENDIF
+
+c     Main wl loop, with temperature dependence
+c     Using Hu et al 2012's choice of QY cutoffs; there is significant variation in measurements
+      
+      do L=1,nw
+
+         if(wl(l) .ge. 2000.) then
+            qy(1,l) = 1.0
+            qy(2,l) = 0.0
+            qy(3,l) = 0.0
+c         else if(wl(l) .ge. 2500.) then
+c            qy(1,l) = 1.0 - 1.e-2*(3000. - wl(l))
+c            qy(2,l) = 1.0 - qy(1,l)
+c            qy(3,l) = 0.0
+c         else if(wl(l) .ge. 2220.) then
+c            qy(1,l) = 0.95 - 0.05/290. * (2500. - wl(l))
+c            qy(2,l) = 0.05 + 0.01/290. * (2500. - wl(l))
+c            qy(3,l) = 1.00 - qy(1,l) - qy(2,l)
+         else if(wl(l) .ge. 1930.) then
+c            qy(1,l) = 0.9 - 0.4/300. * (2220. - wl(l))
+c            qy(2,l) = 0.06 + 0.24/300. * (2220. - wl(l))
+c            qy(3,l) = 1.00 - qy(1,l) - qy(2,l)
+            qy(1,l) = 1.0 - 0.67/69. * (2000. - wl(l))
+            qy(2,l) = 0.39/69. * (2000. - wl(l))
+            qy(3,l) = 1.00 - qy(1,l) - qy(2,l)            
+         else
+            qy(1,l) = 0.33
+            qy(2,l) = 0.39
+            qy(3,l) = 0.28
+         end if
+
+      end do
+
+c     set cross sections with temperature dependence
+      
+      do L=1,nw
+         do i=1,nz
+            sq(jn,i,l) = yg1(l)*qy(1,l)*exp(bg(l)*(tlev(i)-298.))
+            sq(jn+1,i,l) = yg1(l)*qy(2,l)*exp(bg(l)*(tlev(i)-298.))
+            sq(jn+2,i,l) = yg1(l)*qy(3,l)*exp(bg(l)*(tlev(i)-298.))
+         end do
+      end do
+
+     
+      photolabel(jn)='PHNO3'
+      jn=jn+1
+      
+      photolabel(jn)='PHNO3_3'
+      jn=jn+1
+
+      photolabel(jn)='PHNO3_1'
+      jn=jn+1
+
+      return
+      end
+
 
 
        SUBROUTINE XS_HNO3(nw,wl,tlev,jn,sq)
@@ -194,7 +355,7 @@ c      REAL*8 airlev(kz) ! currently this isn't used until declared again below
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1, n2
       REAL*8 x1(kdata), x2(kdata)
       REAL*8 y1(kdata), y2(kdata)
@@ -325,7 +486,7 @@ c      print *, yg1
       RETURN
       END
 
-       SUBROUTINE XS_HO2(nw,wl,wc,jn,sq,jdum)
+      SUBROUTINE XS_HO2(nw,wl,wc,jn,sq,jdum)
 
 *-----------------------------------------------------------------------------*
 *=  PURPOSE:                                                                 =*
@@ -375,7 +536,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1 
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -501,6 +662,110 @@ c      print *, yg1
 
       RETURN
       END
+
+      SUBROUTINE XS_NO2_alinc(nw,wl,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for NO2 photolysis  =*
+*=         NO2 + HV -> NO  + O                                               =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*=  Quantum yield:  Note: Arbitrarily split O1D, O3P pathway (no data)       =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 qy(nz,nw),qy0(nw) ! qy0 is overall quantum yield. split TBD.
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+
+      ierr = 0
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/NO2/NO2_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i),qy0(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_NO2_alinc***'
+         STOP
+      ENDIF
+
+c     Main wl loop
+c     quantum yields < 244 nm are 0.55 +-0.03 (Sun, Glass, & Curl 2001) or 0.51 +- 0.04 (Hancock & Morrison, 2011); at 193 nm
+
+      do L=1,nw
+         if(wl(l) .lt. 2440.) then
+            do i=1,nz
+               qy(i,l) = 0.5
+               sq(jn,i,l) = yg1(l)*qy(i,l)*qy0(l)
+               sq(jn+1,i,l) = yg1(l)*qy(i,l)*qy0(l)
+            end do
+         else
+            do i=1,nz
+               qy(i,l) = 1.0
+               sq(jn+1,i,l) = yg1(l)*qy(i,l)*qy0(l)
+               sq(jn,i,l) = 0.
+            end do 
+         end if              
+      end do
+
+      photolabel(jn)='PNO2_O1D'
+      jn=jn+1
+         
+      photolabel(jn)='PNO2'
+      jn=jn+1
+
+      return
+      end
+
+
  
        SUBROUTINE XS_NO2(nw,wl,tlev,jn,sq)
 
@@ -536,7 +801,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata), x2(kdata), x3(kdata)
       REAL*8 y1(kdata), y2(kdata)
@@ -807,6 +1072,137 @@ c      print *, jn,photolabel
       RETURN
       END
 
+      SUBROUTINE XS_H2O2_alinc(nw,wl,tlev,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for H2O2 photolysis =*
+*=         H2O2+ HV -> 2 OH                                                  =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*=  Quantum yield:  T-dep for 260 - 350 nm used; other pathways exist        =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1)
+      REAL*8 tlev(nz)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 qy
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+      REAL*8 a0, a1, a2, a3, a4, a5, a6, a7
+      REAL*8 b0, b1, b2, b3, b4
+      REAL*8 xs
+      REAL*8 t
+      INTEGER n, idum
+      REAL*8 lambda
+      REAL*8 sumA, sumB, chi
+
+      ierr = 0
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/H2O2/H2O2_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_H2O2_alinc***'
+         STOP
+      ENDIF
+
+      A0 = 6.4761E+04
+      A1 = -9.2170972E+02
+      A2 = 4.535649
+      A3 = -4.4589016E-03
+      A4 = -4.035101E-05
+      A5 = 1.6878206E-07
+      A6 = -2.652014E-10
+      A7 = 1.5534675E-13
+
+      B0 = 6.8123E+03
+      B1 = -5.1351E+01
+      B2 = 1.1522E-01
+      B3 = -3.0493E-05
+      B4 = -1.0924E-07
+
+      qy = 1.0
+
+c     Main wl loop
+
+      do L=1,nw
+         if((wl(l) .ge. 2600.) .and. (wl(l) .le. 3500.)) then
+
+            lambda = wl(l)/10.  !convert to nm
+            sumA = ((((((A7*lambda + A6)*lambda + A5)*lambda +
+     -           A4)*lambda +A3)*lambda + A2)*lambda +
+     -           A1)*lambda + A0
+            sumB = (((B4*lambda + B3)*lambda + B2)*lambda +
+     -           B1)*lambda + B0
+            
+            do i=1,nz
+               t = MIN(MAX(tlev(i),200.),400.)
+               chi = 1./(1.+EXP(-1265./t))
+               xs = (chi * sumA + (1.-chi)*sumB)*1E-21
+               sq(jn,i,l) = xs*qy
+            end do
+         else if(wl(l) .gt. 3500.) then
+            sq(jn,:,l) = 0.
+         else
+            sq(jn,:,l) = yg1(l)*qy
+         end if
+      end do
+         
+      photolabel(jn)='PH2O2'
+      jn=jn+1
+
+      return
+      end
+
+
        ! EWS - airlev not used below
 c      SUBROUTINE XS_H2O2(nw,wl,wc,tlev,airlev,jn,sq)
        SUBROUTINE XS_H2O2(nw,wl,wc,tlev,jn,sq)
@@ -842,7 +1238,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -1042,7 +1438,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -1118,6 +1514,7 @@ c Quantum yield (from Kevin's code - no reference)
       RETURN
       END
 
+      
        SUBROUTINE XS_SO3(nw,wl,jn,sq)
 *-----------------------------------------------------------------------------*
 *=  PURPOSE:                                                                 =*
@@ -1152,7 +1549,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -1265,7 +1662,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -1356,6 +1753,236 @@ c      print *, jn,photolabel
       
       RETURN
       END
+
+             SUBROUTINE XS_S3(nw,wl,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for S3 photolysis   =*
+*=         S3 + HV -> S2 + S                                                 =*
+*=  Cross section:  From Billmers & Smith [1991]                             =*  !UPDATE ME
+*=  Quantum yield:  Assuming 1 with no research                              =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1) ! EWS - wc not needed (S2)
+c      REAL*8 tlev(nz) ! EWS - not used
+c      REAL*8 airlev(nz) ! - EWS - not used
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1
+      REAL*8 x1(kdata)
+      REAL*8 y1(kdata)
+
+* local
+      REAL*8 yg1(nw)
+      REAL*8 qy, scale
+      INTEGER i, iw
+      INTEGER ierr,option
+      ierr = 0      
+
+**************** S3 photodissociation
+
+c options
+c     1)Kevin's photo.dat data
+
+      option=1
+
+      if (option.eq.1) then  !MPI Mainz data
+      OPEN(UNIT=kin,
+     &  file='PHOTOCHEM/DATA/XSECTIONS/S3/S3_alinc.dat',
+     &  STATUS='old')
+     
+      HJtest=0 !HOT JUPITER TEST
+      do i=1,nsp
+C         print*,i,ISPEC(i)
+         if (ISPEC(i).eq.'HE') HJtest=1  !temp solution to get 3 reactions for hot jupiters at Ly alpha
+      enddo 
+
+C         print*,"HJtest",HJtest
+
+      DO i = 1, 2
+         READ(kin,*)
+      ENDDO
+      n1 =  11
+      DO i = 1, n1
+         READ(kin,*) x1(i), y1(i)
+      ENDDO
+      CLOSE (kin)
+
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_S3***'
+         STOP
+      ENDIF
+
+c Quantum yield (no reference nor research)
+c scale is Kevin's factor to (and I quote...)
+C   SCALE UP S2 CROSS SECTIONS TO OBTAIN CORRECT S2 LIFETIME UP HIGH
+
+      qy=1.0
+      scale=1.0
+
+      DO iw = 1, nw
+         DO i = 1, nz
+              sq(jn,i,iw) = yg1(iw)*qy*scale
+         ENDDO
+      ENDDO
+
+      endif  !end option 1
+      
+c      print *, jn,photolabel
+
+      photolabel(jn)='PS3'
+
+      jn=jn+1
+
+      
+      RETURN
+      END
+
+       SUBROUTINE XS_S4(nw,wl,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for S3 photolysis   =*
+*=         S4 + HV -> S2 + S2                                                =*
+*=  Cross section:  From Billmers & Smith [1991]                             =*  !UPDATE ME
+*=  Quantum yield:  Assuming 1 with no research                              =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1) ! EWS - wc not needed (S2)
+c      REAL*8 tlev(nz) ! EWS - not used
+c      REAL*8 airlev(nz) ! - EWS - not used
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1
+      REAL*8 x1(kdata)
+      REAL*8 y1(kdata)
+
+* local
+      REAL*8 yg1(nw)
+      REAL*8 qy, scale
+      INTEGER i, iw
+      INTEGER ierr,option
+      ierr = 0      
+
+**************** S4 photodissociation
+
+c options
+c     1)Kevin's photo.dat data
+
+      option=1
+
+      if (option.eq.1) then  !MPI Mainz data
+      OPEN(UNIT=kin,
+     &  file='PHOTOCHEM/DATA/XSECTIONS/S4/S4_alinc.dat',
+     &  STATUS='old')
+     
+      HJtest=0 !HOT JUPITER TEST
+      do i=1,nsp
+C         print*,i,ISPEC(i)
+         if (ISPEC(i).eq.'HE') HJtest=1  !temp solution to get 3 reactions for hot jupiters at Ly alpha
+      enddo 
+
+C         print*,"HJtest",HJtest
+
+      DO i = 1, 2
+         READ(kin,*)
+      ENDDO
+      n1 =  11
+      DO i = 1, n1
+         READ(kin,*) x1(i), y1(i)
+      ENDDO
+      CLOSE (kin)
+
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_S4***'
+         STOP
+      ENDIF
+
+c Quantum yield (no reference nor research)
+c scale is Kevin's factor to (and I quote...)
+C   SCALE UP S2 CROSS SECTIONS TO OBTAIN CORRECT S2 LIFETIME UP HIGH
+
+      qy=1.0
+      scale=1.0
+
+      DO iw = 1, nw
+         DO i = 1, nz
+              sq(jn,i,iw) = yg1(iw)*qy*scale
+         ENDDO
+      ENDDO
+
+
+
+      endif  !end option 1
+      
+c      print *, jn,photolabel
+
+      photolabel(jn)='PS4'
+
+      jn=jn+1
+
+      
+      RETURN
+      END
+
+
       
        SUBROUTINE XS_S8(nw,wl,jn,sq)
 *-----------------------------------------------------------------------------*
@@ -1395,7 +2022,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=120)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata), x2(kdata)
       REAL*8 y1(kdata), y2(kdata)
@@ -1529,6 +2156,7 @@ c        enddo
       RETURN
       END
 
+
        SUBROUTINE XS_H2S(nw,wl,jn,sq)
 *-----------------------------------------------------------------------------*
 *=  PURPOSE:                                                                 =*
@@ -1564,7 +2192,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=21000)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -1581,7 +2209,7 @@ c options
 c     1)Kevin's photo.dat data
 c     2)MPI data, high res from 160-260 (not there is some temperature dependence here which is not included), along with far UV data not in photo.dat
 
-      option=2
+      option=1
 
 
       if (option.eq.1) then  !Kevin's data
@@ -1727,7 +2355,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 * local
       INTEGER ierr,option
       integer kdata
-      parameter(kdata=7000)
+      parameter(kdata=kw)
       real*8 x1(kdata)
       real*8 y1(kdata)
       real*8 x2(kdata)
@@ -1998,7 +2626,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -2079,6 +2707,107 @@ c Quantum yield (no reference nor research)
       RETURN
       END
 
+                  SUBROUTINE XS_CO2_alinc(nw,wl,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for CO2 photolysis  =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*     =  Quantum yield:  Inn 1993 and references therein      =
+*     NOTE! There is temperature dependence available for O3P (>167 nm)
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 qy1(nw),qy2(nw)
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+
+      ierr = 0
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/CO2/CO2_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_CO2_alinc***'
+         STOP
+      ENDIF
+
+c     Main wl loop
+c     quantum yields Inn 1993
+
+      do L=1,nw
+         if(wl(l) .le. 1670.) then
+            qy1(l) = 0.5
+            qy2(l) = 0.
+            sq(jn,:,l) = yg1(l)*qy1(l)
+            sq(jn+1,:,l) = yg1(l)*qy2(l)
+         else
+            qy1(l) = 0.
+            qy2(l) = 1.
+            sq(jn,:,l) = yg1(l)*qy1(l)
+            sq(jn+1,:,l) = yg1(l)*qy2(l)
+         end if
+      end do
+
+      photolabel(jn)='PCO2_O1D'
+      jn=jn+1
+         
+      photolabel(jn)='PCO2_O3P'
+      jn=jn+1
+
+      return
+      end
+
+
        SUBROUTINE XS_CO2(nw,wl,jn,sq)
 *-----------------------------------------------------------------------------*
 *=  PURPOSE:                                                                 =*
@@ -2114,7 +2843,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata), x2(kdata)
       REAL*8 y1(kdata), y2(kdata)
@@ -2267,6 +2996,146 @@ c      print *, jn, photolabel
       RETURN
       END
 
+      SUBROUTINE XS_H2CO_alinc(nw,wl,wc,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for H2CO photolysis =*
+*=  (3)    H2CO + HV -> 2H + CO    283 nm                                    =*
+*=  (2)    H2CO + HV -> H2 + CO    361 nm                                    =*
+*=  (1)    H2CO + HV -> H + HCO    330 nm                                    =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*=  Quantum yield:  JPL;  Some temperature dependence may not be included.   =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1),wc(nw)
+      REAL*8 lambda
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 qy1(nz,nw),qy2(nz,nw),qy3(nz,nw)
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+      REAL*8 a0,a1,a2,a3,a4
+
+      ierr = 0
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/H2CO/H2CO_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_H2CO_alinc***'
+         STOP
+      ENDIF
+
+c     Main wl loop
+
+c     Yields for pathway 1 (-> HCO + H), our third, from JPL 15-10
+
+      a0 = 557.95835182
+      a1 = -7.31994058026
+      a2 = 0.03553521598
+      a3 = -7.54849718e-5
+      a4 = 5.91001021e-8
+
+      do L=1,nw
+         if(wc(l) .ge. 2500. .and. wc(l) .le. 3390.) then
+            lambda = wc(l)*0.1
+            do i=1,nz
+               qy3(i,l) = a0 + a1*lambda + a2*lambda**2 + a3*lambda**3 +
+     -              a4*lambda**4
+            end do
+         else 
+            qy3(i,l) = 0.
+         end if
+      end do
+
+c     Pathways 2, 3
+
+      do L=1,nw
+         if(wc(l) .le. 2830.) then
+            do i=1,nz
+               qy1(i,l) = 1.-qy3(i,l)
+               qy2(i,l) = 0.
+            end do
+         else
+            do i=1,nz
+               qy2(i,l) = 1.-qy3(i,l)
+               qy1(i,l) = 0.
+            end do
+         end if
+      end do
+
+      do l=1,nw
+         do i=1,nz
+            sq(jn,i,l) = yg1(l)*qy1(i,l)
+            sq(jn+1,i,l) = yg1(l)*qy2(i,l)
+            sq(jn+2,i,l) = yg1(l)*qy3(i,l)
+         end do
+      end do
+
+         
+      photolabel(jn)='PH2CO_2H'
+      jn=jn+1
+
+      photolabel(jn)='PH2CO_H2'
+      jn=jn+1
+
+      photolabel(jn)='PH2CO_HCO'
+      jn=jn+1
+
+
+
+      return
+      end
+
+
        !EWS - airlev, tlev, wc not used
 c      SUBROUTINE XS_H2CO(nw,wl,wc,tlev,airlev,jn,sq)
        SUBROUTINE XS_H2CO(nw,wl,jn,sq)
@@ -2304,7 +3173,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=120)
+      PARAMETER(kdata=kw)
       INTEGER n1, n2,n3
       REAL*8 x1(kdata), x2(kdata), x3(kdata)
       REAL*8 y1(kdata), y2(kdata), y3(kdata)
@@ -2425,6 +3294,126 @@ c Quantum yields:  from Kevin's photo.dat file
       RETURN
       END
 
+      SUBROUTINE XS_SO2_alinc(nw,wl,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for O3 photolysis   =*
+*=         SO2 + HV -> SO + O                                                =*
+*=         SO2 + HV -> SO21                                                  =*
+*=         SO2 + HV -> SO23                                                  =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*=  Quantum yield:  Cut into bands (somewhat arbitrary, similar to Zahnle's) =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn!,jdum
+      REAL*8 wl(nw+1)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 qy(nz,nw)
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+
+      ierr = 0
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/SO2/SO2_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_SO2_alinc***'
+         STOP
+      ENDIF
+
+c     Main wl loop
+
+      do L=1,nw
+         do i=1,nz
+            qy(i,l) = 1.0
+         end do
+      end do
+         
+c     cut into pathways
+
+      do l=1,nw
+         if(wl(l) .lt. 2350.) then
+            do i=1,nz
+               sq(jn,i,l) = yg1(l)*qy(i,l)
+               sq(jn+1,i,l) = 0.
+               sq(jn+2,i,l) = 0.
+            end do
+         else if(wl(l) .lt. 3400.) then
+            do i=1,nz
+               sq(jn+1,i,l) = yg1(l)*qy(i,l)
+               sq(jn,i,l) = 0.
+               sq(jn+2,i,l) = 0.
+            end do
+         else
+            do i=1,nz
+               sq(jn+2,i,l) = yg1(l)*qy(i,l)
+               sq(jn+1,i,l) = 0.
+               sq(jn,i,l) = 0.
+            end do
+         end if
+      end do
+
+      photolabel(jn)='PSO2'
+      jn=jn+1
+
+      photolabel(jn)='PSO2_SO21'
+      jn=jn+1
+
+      photolabel(jn)='PSO2_SO23'
+      jn=jn+1
+
+      return
+      end
+
 
        SUBROUTINE XS_SO2(nw,wl,jn,sq)
 *-----------------------------------------------------------------------------*
@@ -2463,7 +3452,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata,kdataHR
-      PARAMETER(kdata=120,kdataHR=1200)
+      PARAMETER(kdata=kw,kdataHR=1200)
       INTEGER n1, n2,n3
       REAL*8 x1(kdata), x2(kdata), x3(kdata)
       REAL*8 y1(kdata), y2(kdata), y3(kdata)
@@ -2672,6 +3661,180 @@ c      n4 = 4159
       RETURN
       END
 
+      SUBROUTINE XS_O3_alinc(nw,wl,tlev,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for O3 photolysis   =*
+*=         O3 + HV -> O2 + O(1D)                                             =*
+*=         O3 + HV -> O2 + O(3P)                                             =*
+*=         O3 + HV -> 3 O(3P)                                                =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*=  Quantum yield:  Expressly calculated from JPL 15-10 recommendations      =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1)
+      REAL*8 tlev(nz)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 o3xs(nz,nw),TI,FR
+      REAL*8 xc(3),om(3),Ac(3),nu(2),qc(nz,2),cc
+      REAL*8 qy(nz,nw)
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+
+      ierr = 0
+
+c     coefficients for temperature dependence
+      xc(1) = 304.225
+      xc(2) = 314.957
+      xc(3) = 310.737
+      om(1) = 5.576
+      om(2) = 6.601
+      om(3) = 2.187
+      Ac(1) = 0.8036
+      Ac(2) = 8.9061
+      Ac(3) = 0.1192
+      nu(1) = 0.
+      nu(2) = 825.518
+      cc = 0.0765
+
+      do i=1,nz
+         qc(i,1) = exp(-nu(1)/(0.695*tlev(i)))
+         qc(i,2) = exp(-nu(2)/(0.695*tlev(i)))
+      end do
+
+**************** O3 photodissociation
+
+C  O3 + HV -> O2 + O(1D)
+C  O3 + HV -> O2 + O(3P)
+C  O3 + HV -> 3 O(3P)
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/O3/O3_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_O3_alinc***'
+         STOP
+      ENDIF
+
+c     Main wl loop, with temperature dependence, for pathway 1
+c     O3 + hv -> O2 + O1D
+
+      do L=1,nw
+
+         if(wl(l) .gt. 3800.) then ! APL arbitrary choice for 0 point (bond energy goes to 411 nm?)
+            qy(:,l) = 0.
+         else if(wl(l) .ge. 3400.) then ! APL linear down to zero from cc (= 0.0765)
+            qy(:,l) = cc/400.*(3800. - wl(l))
+         else if(wl(l) .ge. 3280.) then
+            qy(:,l) = cc
+         else if(wl(l) .ge. 3060.) then
+            do i=1,nz
+               qy(i,l) = qc(i,1)/(qc(i,1)+qc(i,2)) * 
+     -              Ac(1)*exp(-((xc(1)-wl(l)*0.1)/om(1))**4) +
+     -              qc(i,2)/(qc(i,1)+qc(i,2))*Ac(2)*(tlev(i)/300.)**2 *
+     -              exp(-((xc(2)-wl(l)*0.1)/om(2))**2) +
+     -              Ac(3)*(tlev(i)/300)**1.5 *
+     -              exp(-((xc(3)-wl(l)*0.1)/om(3))**2) + cc
+               if(qy(i,l) .eq. 0.) then
+               end if
+            end do
+         else if(wl(l) .ge. 2233.) then
+            qy(:,l) = 0.9
+         else if(wl(l) .ge. 1788.) then
+            qy(:,l) = 1.37e-3*wl(l) - 2.16
+         else
+            qy(:,l) = 0.29
+         end if
+
+      end do
+
+c     set quantum yield for pathway 1 and total xsec
+      do L=1,nw
+         do i=1,nz
+            sq(jn,i,l) = yg1(l)*qy(i,l)
+            O3xs(i,l) = yg1(l)
+         end do
+      end do
+
+c     quantum yield for pathway 2 and 3
+c     O3 + hv -> O2 + O(3P)
+c     O3 + hv -> 3 O(3P)
+
+      do L=1,nw
+
+         do i=1,nz
+            if(wl(l) .lt. 2010.) then
+               sq(jn+2,i,l) = (1.-qy(i,l))*yg1(l)
+               sq(jn+1,i,l) = 0.
+            else
+               sq(jn+1,i,l) = (1.-qy(i,l))*yg1(l)
+               sq(jn+2,i,l) = 0.
+            end if
+         end do
+
+      end do
+
+      
+      photolabel(jn)='PO3_O1D'
+      jn=jn+1
+      
+      photolabel(jn)='PO3_O'
+      jn=jn+1
+
+      photolabel(jn)='PO3_3O'
+      jn=jn+1
+
+      return
+      end
 
        SUBROUTINE XS_O3(nw,wl,tlev,jn,sq)
 *-----------------------------------------------------------------------------*
@@ -2705,7 +3868,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=130)
+      PARAMETER(kdata=kw)
       INTEGER n1, n2
       REAL*8 x1(kdata), x2(kdata)
       REAL*8 y1(kdata), y2(kdata)
@@ -2723,6 +3886,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 C  O3 + HV -> O2 + O(1D)
 C  O3 + HV -> O2 + O(3P)
+C  O3 + HV -> 3 O(3P) ! APL added but doesn't do much
 
 c options
 c     1)Kevin's photo.dat data - combined with far uv data from MPI
@@ -2731,30 +3895,6 @@ c - assuming no temperature dependence in the shortwave
       option=1
 
       if (option.eq.1) then  !Kevin's data
-
-c$$$C below here is temp to bin the far uv data from MPI to our grid...
-c$$$      OPEN(UNIT=kin,
-c$$$     &  file='PHOTOCHEM/DATA/XSECTIONS/O3/O3_mpi_SW_Mason96.abs',
-c$$$     &  STATUS='old')
-c$$$c      DO i = 1, 2
-c$$$c         READ(kin,*)
-c$$$c      ENDDO
-c$$$      n1 = 53
-c$$$      DO i = 1, n1
-c$$$         READ(kin,*) x1(i),y1(i)
-c$$$         x1(i)=x1(i)*10.  !convert nm to A
-c$$$      ENDDO
-c$$$      CLOSE (kin)
-c$$$      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
-c$$$      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
-c$$$      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
-c$$$      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
-c$$$      CALL inter2(nw+1,wl,yg1,n1,x1,y1,0)   !inter2 - points to bins
-c$$$
-c$$$      do i=1,nw
-c$$$         print *, wl(i),yg1(i)
-c$$$      enddo
-c$$$      stop
 
       HJtest=0 !HOT JUPITER TEST
       do i=1,nsp
@@ -2770,14 +3910,13 @@ C         print*,"HJtest",HJtest
       DO i = 1, 2
          READ(kin,*)
       ENDDO
-      n1 = 118
-      n2 = 118
+      n1 = nw
+      n2 = nw
       DO i = 1, n1
          READ(kin,*) x1(i),y1(i),y2(i)
          x2(i)=x1(i)
       ENDDO
       CLOSE (kin)
-
 
       CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
       CALL addpnt(x1,y1,kdata,n1,               zero,zero)
@@ -2932,7 +4071,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -3056,6 +4195,132 @@ c Quantum yield ( - there are some channel data for excited states of CL but wha
       RETURN
       END
 
+      SUBROUTINE XS_O2_alinc(nw,wl,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for O2 photolysis   =*
+*=         O3 + HV -> O + O(1D)                                              =*
+*=         O3 + HV -> O + O(3P)                                              =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*=  Quantum yield:  Determined from rough avg data from JPL 15-10            =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1)
+      REAL*8 tlev(nz)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 qy(nz,nw)
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+
+      ierr = 0
+
+**************** O2 photodissociation
+
+C  O2 + HV -> O + O(1D)
+C  O2 + HV -> O + O(3P)
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/O2/O2_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_O2_alinc***'
+         STOP
+      ENDIF
+
+c     Main wl loop for both pathways
+
+      do L=1,nw
+
+         if(wl(l) .le. 1390.) then
+            qy(:,l) = 0.5
+         else if(wl(l) .le. 1750.) then
+            qy(:,l) = 1.0
+         else 
+            qy(:,l) = 0.0
+         end if
+
+      end do
+
+c     set quantum yield for pathway 1 and total xsec
+      do L=1,nw
+         do i=1,nz
+            sq(jn,i,l) = yg1(l)*qy(i,l)
+         end do
+      end do
+
+c     quantum yield for pathway 2
+c     O2 + hv -> O(3P) + O(3P)
+
+      do L=1,nw
+
+         do i=1,nz
+            if(wl(l) .le. 2420.) then
+               sq(jn+1,i,l) = yg1(l)*(1.-qy(i,l))
+            else
+               sq(jn+1,i,l) = 0.
+            end if
+         end do
+         
+      end do
+
+      photolabel(jn)='PO2_O1D'
+      jn=jn+1
+
+      photolabel(jn)='PO2_O3P'
+      jn=jn+1
+
+
+      return
+      end
 
 
        !EWS - wc not used
@@ -3095,7 +4360,7 @@ c      SUBROUTINE XS_O2(nw,wl,wc,tlev,airlev,jn,sq,columndepth,zy,IO2)
       
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata), x2(kdata)
       REAL*8 y1(kdata), y2(kdata)
@@ -3515,7 +4780,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -3573,17 +4838,17 @@ C         print*,"HJtest",HJtest
 c Quantum yields and reactions depend on wavelength and presence of hydrocarbons
 
       DO iw = 1, nw
-         if (wl(iw).eq.1216) then  !ack hardcoded wavelength
+c         if (wl(iw).ge. 1200 .and. wl(iw) .lt. 1230) then  !ack hardcoded wavelength
 c-mab: November 2016: Switched qy2 and qy3 values from original due to comparison with a previous person.
 c-mab: A discussion within the GSFC group (following discrepancy with Kopparapu et al 2012 code) suggested they must've gotten switched somewhere accidentally? 
-            qy=0.24
-            qy2=0.51
-            qy3=0.25
-         else  !first reaction dominates everywhere but Ly a
-          qy=1.0
-          qy2=0.0
-          qy3=0.0
-         endif   
+c            qy=0.24
+c            qy2=0.51
+c            qy3=0.25
+c         else  !first reaction dominates everywhere but Ly a
+          qy=0.53
+          qy2=0.41
+          qy3=0.06
+c         endif   
 
          DO i = 1, nz
               sq(jn,i,iw) = yg1(iw)*qy
@@ -3652,7 +4917,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -3715,7 +4980,7 @@ c Quantum yield's depend on if there are higher order hydrocarbon and wavelength
       enddo   
 
       DO iw = 1, nw
-            if (wl(iw).eq.1216) then !wl dependent quantum yield just at ly a
+            if (wl(iw) .ge. 1200 .and. wl(iw) .lt. 1230) then !wl dependent quantum yield just at ly a
               qy  = 0.0
               qy2 = 0.25
               qy3  = 0.25
@@ -3777,6 +5042,98 @@ c       print *, 'upon seeing this note for the first time...'
       RETURN
       END
 
+      SUBROUTINE XS_NO_alinc(nw,wl,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for H2O photolysis  =*
+*=         NO + HV -> N + O                                                  =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*=  Quantum yield:  Photolysis at < 191 nm per MINSCHWANER & Siskind 1993    =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 qy(nz,nw)
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+
+      ierr = 0
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/NO/NO_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_NO_alinc***'
+         STOP
+      ENDIF
+
+c     Main wl loop
+
+      do L=1,nw
+         if(wl(l) .le. 1910.) then
+            sq(jn,:,l) = yg1(l)
+         else
+            sq(jn,:,l) = 0.
+         end if
+      end do
+         
+      photolabel(jn)='PNO'
+      jn=jn+1
+
+      return
+      end
+
+
+
        ! EWS - wl, wc, sq, and nw not used
 c      SUBROUTINE XS_NO(nw,wl,wc,tlev,airlev,jn,sq,columndepth)
        SUBROUTINE XS_NO(tlev,airlev,jn,columndepth)
@@ -3808,7 +5165,7 @@ c      REAL*8 sq(kj,nz,kw) !EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
 c      INTEGER n1, n2 ! EWS - not used
 c      REAL*8 x1(kdata), x2(kdata), x3(kdata) ! EWS - not used
 c      REAL*8 y1(kdata), y2(kdata) ! EWS - not used
@@ -3957,7 +5314,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata,kdata2
-      PARAMETER(kdata=300,kdata2=100)
+      PARAMETER(kdata=kw,kdata2=kw)
       INTEGER n1, n1o
       REAL*8 x1(kdata), x2(kdata2),x2o(kdata2)
       REAL*8 y1(kdata), y2(kdata2),y3(kdata2),y4(kdata2),y5(kdata2)
@@ -3998,7 +5355,7 @@ c      ENDDO
       CALL addpnt(x1,y1,kdata,n1,               zero,zero)
       CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
       CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
-      CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   ! inter2 is grid - bins
+      CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr) ! inter2 is grid - bins
 
       IF (ierr .NE. 0) THEN
          WRITE(*,*) ierr, ' ***Something wrong in XS_NO3***'
@@ -4024,7 +5381,10 @@ c Quantum yield (is temperature dependent)
       CLOSE (kin)
 
 !interpolate the quantum yield data to working wavelength grid
-!test to see if I interpolate each group if the numbers sum to 1000.
+!     test to see if I interpolate each group if the numbers sum to 1000.
+
+! APL fixing QY outside of QY data ranges -- should not be zero!!
+      
       n1=n1o
       x2=x2o
       CALL addpnt(x2,y2,kdata2,n1,x2(1)*(1.-deltax),zero)  
@@ -4068,10 +5428,10 @@ c Quantum yield (is temperature dependent)
       CALL addpnt(x2,y7,kdata2,n1,            biggest,zero)
       CALL inter2(nw+1,wl,yg7,n1,x2,y7,ierr)   ! inter2 is grid - bins
  
-      do l=1,nw
+c      do l=1,nw
 c         print *, wl(l),yg2(l),yg3(l),yg4(l)
 c         print *, wl(l),yg5(l),yg6(l),yg7(l)
-      enddo   
+c      enddo   
 
       T1=298.
       T2=230.
@@ -4125,6 +5485,122 @@ c      write(14,*) jn, photolabel
       RETURN
       END
 
+      SUBROUTINE XS_N2O_alinc(nw,wl,wc,tlev,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for N2O photolysis  =*
+*=         N2O + HV -> N2  + O1D                                             =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*=  Quantum yield:  Note: Temperature dependence hardcoded 173-240 nm        =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1),wc(nw)
+      REAL*8 tlev(nz)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 qy
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+      REAL*8 lambda
+
+      ierr = 0
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/N2O/N2O_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_N2O_alinc***'
+         STOP
+      ENDIF
+
+c cross section is temperature dependent - see JPL-06/15
+
+      A0 = 68.21023
+      A1 = -4.071805
+      A2 = 4.301146E-02
+      A3 = -1.777846E-04
+      A4 = 2.520672E-07
+
+      B0 = 123.4014
+      B1 = -2.116255
+      B2 = 1.111572E-02
+      B3 = -1.881058E-05
+
+c     Main wl loop
+
+      qy = 1.0
+      do L=1,nw
+         lambda = wc(iw)/10. !convet to nm
+
+         IF (lambda .GE. 173. .AND. lambda .LE. 240.) THEN
+            DO iz = 1, nz
+               t = MAX(194.,MIN(tlev(iz),302.))
+               A = (((A4*lambda+A3)*lambda+A2)*lambda+A1)*lambda+A0
+               B = (((B3*lambda+B2)*lambda+B1)*lambda+B0)
+               B = (t-300.)*EXP(B)
+               sq(jn,iz,iw) = qy * EXP(A+B)
+            ENDDO
+         ELSE
+            do i=1,nz
+               sq(jn,i,l) = yg1(l)*qy
+            end do
+         end if
+      end do
+
+      photolabel(jn)='PN2O'
+      jn=jn+1
+
+      return
+      end
+
 
 
        !EWS - airlev not used
@@ -4157,7 +5633,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -4287,7 +5763,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -4391,7 +5867,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=150)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -4485,7 +5961,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=350)
+      PARAMETER(kdata=kw)
 c      INTEGER n1, n2 ! EWS - not used
 c      REAL*8 x1(kdata), x2(kdata), x3(kdata) !EWS - not used
 c      REAL*8 y1(kdata), y2(kdata) !EWS - not used
@@ -4564,7 +6040,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=50)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -4658,7 +6134,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=250)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -4754,7 +6230,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=50)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -4847,7 +6323,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=150)
+      PARAMETER(kdata=kw)
       INTEGER n1, n2,n3
       REAL*8 x1(kdata), x2(kdata), x3(kdata)
       REAL*8 y1(kdata), y2(kdata), y3(kdata)
@@ -4995,7 +6471,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=150)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -5088,7 +6564,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=50)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -5182,7 +6658,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -5276,7 +6752,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=50)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -5407,7 +6883,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=50)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -5537,7 +7013,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=60)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -5630,7 +7106,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=150)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -5736,7 +7212,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=35)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -5828,7 +7304,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=35)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -5889,6 +7365,7 @@ c assuming Quantum yield is 1 (other channel is negligble (plus we don't do CH2O
       RETURN
       END
 
+      
        !EWS - airlev, tlev, and wc not used
 c      SUBROUTINE XS_CH3OOH(nw,wl,wc,tlev,airlev,jn,sq)
        SUBROUTINE XS_CH3OOH(nw,wl,jn,sq)
@@ -5920,7 +7397,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=40)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -6012,7 +7489,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=65)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -6110,7 +7587,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=55)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -6171,6 +7648,112 @@ c Quantum yield is 1, ignoring potential other branches at short wavelengths...
       RETURN
       END
 
+            SUBROUTINE XS_N2O5_alinc(nw,wl,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for N2O5 photolysis =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*     =  Quantum yield:  Note: Split according to Hu et al 2012 / from JPL   =*
+*     NOTE! There is temperature dependence available, which was previously used.
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn!,jdum
+      REAL*8 wl(nw+1)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 qy1(nw),qy2(nw)
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+
+      ierr = 0
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/N2O5/N2O5_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_N2O5_alinc***'
+         STOP
+      ENDIF
+
+c     Main wl loop
+c     quantum yields Hu et al 2012  / JPL
+
+      do L=1,nw
+         if(wl(l) .lt. 2480.) then
+            qy1(l) = 1.0
+            qy2(l) = 0.
+            sq(jn,:,l) = yg1(l)*qy1(l)
+            sq(jn+1,:,l) = yg1(l)*qy2(l)
+         else if(wl(l) .gt. 3000.) then
+            qy1(l) = 0.
+            qy2(l) = 0.7
+            sq(jn,:,l) = yg1(l)*qy1(l)
+            sq(jn+1,:,l) = yg1(l)*qy2(l)
+         else
+            qy1(l) = 1.0/520.*(3000. - wl(l))
+            qy2(l) = 0.7/520.*(wl(l)-2480.)
+            sq(jn,:,l) = yg1(l)*qy1(l)
+            sq(jn+1,:,l) = yg1(l)*qy2(l)
+         end if
+      end do
+
+      photolabel(jn)='PN2O5_NO2'
+      jn=jn+1
+         
+      photolabel(jn)='PN2O5_NO'
+      jn=jn+1
+
+      return
+      end
+
+
        !EWS - airlev not used
 c      SUBROUTINE XS_N2O5(nw,wl,wc,tlev,airlev,jn,sq)
        SUBROUTINE XS_N2O5(nw,wl,wc,tlev,jn,sq)
@@ -6205,7 +7788,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=150)
+      PARAMETER(kdata=kw)
       INTEGER n1, n2,n3
       REAL*8 x1(kdata), x2(kdata), x3(kdata)
       REAL*8 y1(kdata), y2(kdata), y3(kdata),A(kdata),B(kdata)
@@ -6373,7 +7956,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=55)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -6466,7 +8049,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=30)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -6556,7 +8139,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=85)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -6647,7 +8230,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=1200)
+      PARAMETER(kdata=kw)
       INTEGER n1, n2
       REAL*8 x1(kdata), x2(kdata)
       REAL*8 y1(kdata), y2(kdata)
@@ -6770,7 +8353,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=1000)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -7001,7 +8584,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=305,kdata2=50)
+      PARAMETER(kdata=kw,kdata2=kw)
       INTEGER n1,n2,n3,n4,n5
       REAL*8 x1(kdata), x2(kdata2),x3(kdata2),x4(kdata2),x5(kdata2)
       REAL*8 y1(kdata), y2(kdata2),y3(kdata2),y4(kdata2),y5(kdata2)
@@ -7231,7 +8814,7 @@ c      stop
 
 c Quantum yields
       DO iw = 1, nw
-       if (wl(iw).ge.1216 .and. wl(iw).le.1754) then  !for C2H2 in Shawns "shortwave" loop,which has some absorbtion in lya where ours doesn't
+       if (wl(iw).ge.1200 .and. wl(iw).le.1754) then  !for C2H2 in Shawns "shortwave" loop,which has some absorbtion in lya where ours doesn't
           qy=0.3
           qy2=0.1
        else  !for 1754-2532 
@@ -7293,7 +8876,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=150)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -7394,7 +8977,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -7505,7 +9088,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=1000)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -7611,7 +9194,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -7715,7 +9298,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=100)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -7821,7 +9404,7 @@ c      REAL*8 airlev(nz) ! - EWS - not used
 
 * data arrays
       INTEGER kdata
-      PARAMETER(kdata=200)
+      PARAMETER(kdata=kw)
       INTEGER n1
       REAL*8 x1(kdata)
       REAL*8 y1(kdata)
@@ -7870,7 +9453,7 @@ c Quantum yields done in wl loop. diff at ly a then everywhere else
 
       DO iw = 1, nw
 
-       if (wl(iw).eq.1216) then  !for C3H8 at Ly a
+       if (wl(iw).ge. 1200 .and. wl(iw) .le. 1230) then  !for C3H8 at Ly a
         qy1 = 0.33 
         qy2 = 0.08
         qy3 = 0.39
@@ -7906,4 +9489,208 @@ c Quantum yields done in wl loop. diff at ly a then everywhere else
       jn=jn+1
 
       RETURN
-      END
+      end
+
+      SUBROUTINE XS_alinc(species,nw,wl,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for generic photo.  =*
+*=  Cross section:  MPI database format, read in units of nm and cm^-2       =*
+*=  Quantum yield:  1 for now, but we could add in a read for this later.    =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*=  NW     - INTEGER, number of specified intervals + 1 in working        (I)=*
+*=           wavelength grid                                                 =*
+*=  WL     - REAL, vector of lower limits of wavelength intervals in      (I)=*
+*=           working wavelength grid                                         =*
+*=  Jn      - INTEGER, counter for number of weighting functions defined  (IO)=*
+*=  SQ     - REAL, cross section x quantum yield (cm^2) for each          (O)=*
+*=           photolysis reaction defined, at each defined wavelength and     =*
+*=           at each defined altitude level                                  =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      CHARACTER*8 species
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 qy(nz,nw)
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+
+      ierr = 0
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/' // trim(species) // '/' //
+     &     trim(species) // '_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_alinc***: ',species
+         STOP
+      ENDIF
+
+c     Main wl loop
+
+      do L=1,nw
+         do i=1,nz
+            qy(i,l) = 1.0
+            sq(jn,i,l) = yg1(l)*qy(i,l)
+         end do
+      end do
+         
+      photolabel(jn)='P' // trim(species)
+      jn=jn+1
+
+      return
+      end
+      
+
+      SUBROUTINE XS_NH3_alinc(nw,wl,jn,sq)
+*-----------------------------------------------------------------------------*
+*=  PURPOSE:                                                                 =*
+*=  Provide product of (cross section) x (quantum yield) for NH3 photolysis  =*
+*=  Cross section:  From alinc's updated data from MPI Mainz                 =*
+*=  Quantum yield:  Lilly et al 1993, Hu et al 2012                          =*
+*-----------------------------------------------------------------------------*
+*=  PARAMETERS:  see above subroutines                                       =*
+*-----------------------------------------------------------------------------*
+
+      INCLUDE 'PHOTOCHEM/INPUTFILES/parameters.inc'
+      implicit real*8(A-H,O-Z)
+      REAL*8 deltax,biggest,zero
+      PARAMETER (deltax = 1.E-4,biggest=1.E+36, zero=0.0)
+      CHARACTER*11 photolabel
+      CHARACTER*8 ISPEC
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/PBLOK.inc'
+      INCLUDE 'PHOTOCHEM/DATA/INCLUDE/DBLOK.inc'
+      SAVE/PBLOK/
+* input
+      INTEGER nw,jn
+      REAL*8 wl(nw+1)
+
+* weighting functions
+      REAL*8 sq(kj,nz,kw)
+
+* data arrays
+      INTEGER kdata
+      PARAMETER(kdata=kw)
+      INTEGER n1, n2
+      REAL*8 x1(kdata), x2(kdata)
+      REAL*8 y1(kdata), y2(kdata)
+
+* local
+      REAL*8 yg1(nw), yg2(nw)
+      REAL*8 qy1(nw),qy2(nw)
+      INTEGER i, iw
+      INTEGER ierr
+      INTEGER L
+
+      ierr = 0
+
+      OPEN(UNIT=kin,
+     &     file='PHOTOCHEM/DATA/XSECTIONS/NH3/NH3_alinc.dat',
+     &     STATUS='old')
+
+      DO i = 1, 7
+         READ(kin,*)
+      ENDDO
+      n1 = nw
+      n2 = nw
+      DO i = 1, n1
+         READ(kin,*) x1(i),y1(i)
+         x2(i)=x1(i)
+      ENDDO
+      CLOSE (kin)
+
+c     interpolate gridpoints if needed
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),zero)  
+      CALL addpnt(x1,y1,kdata,n1,               zero,zero)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),zero)
+      CALL addpnt(x1,y1,kdata,n1,            biggest,zero)
+      IF (HJtest.eq.1) THEN
+      	CALL inter3(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ELSE
+      	CALL inter2(nw+1,wl,yg1,n1,x1,y1,ierr)   
+      ENDIF 
+
+      IF (ierr .NE. 0) THEN
+         WRITE(*,*) ierr, ' ***Something wrong in XS_NH3_alinc***'
+         STOP
+      ENDIF
+
+c     Main wl loop
+c     quantum yields Lilly et al 1973 / Hu et al 2012
+
+      do L=1,nw
+         if(wl(l) .lt. 1060.) then
+            qy1(l) = 0.7
+            qy2(l) = 1. - qy1(l)
+            sq(jn,:,l) = yg1(l)*qy1(l)
+            sq(jn+1,:,l) = yg1(l)*qy2(l)
+         else if(wl(l) .gt. 1650.) then
+            qy1(l) = 0.
+            qy2(l) = 1.
+            sq(jn,:,l) = yg1(l)*qy1(l)
+            sq(jn+1,:,l) = yg1(l)*qy2(l)
+         else
+            qy1(l) = 0.7/590.*(1650. - wl(l))
+            qy2(l) = 1.0 - qy1(l)
+            sq(jn,:,l) = yg1(l)*qy1(l)
+            sq(jn+1,:,l) = yg1(l)*qy2(l)
+         end if
+      end do
+
+      photolabel(jn)='PNH3_H2'
+      jn=jn+1
+         
+      photolabel(jn)='PNH3_H'
+      jn=jn+1
+
+      return
+      end

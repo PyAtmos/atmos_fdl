@@ -194,6 +194,8 @@ c         if (ISPEC(I).EQ.'SO4AER') YL(I,J) = YL(I,J) + RAINGC(LH2SO4,J)
        CONFAC = 1.6E-5 * 10.    ! reduce supersaturation of stratosphere
       else if (PLANET .EQ. 'DRY') then !added by EWS 9/14/2015
        CONFAC =  1.6E-5 * 10.    ! reduce supersaturation of stratosphere
+      else if (PLANET .EQ. 'VENUS') then
+       CONFAC = 1.6E-5 * 10. ! APL THIS IS TOTALLY BOGUS.
       endif   
 
 
@@ -209,6 +211,9 @@ c-mab: (Basing this one on FH2-based distinction...) !mc - could we use the PLAN
       IF(FH2.LT.0.50) THEN
        JT1 = JTROP + 1          ! same as NH1
   
+       if(planet .eq. 'VENUS') then
+          goto 6                ! APL SKIPPING THIS HARDCODED BS
+       end if
        DO 5 J=1,JTROP
         FVAL(LH2O,J) = 0.
         YP(LH2O,J) = 0.
@@ -276,6 +281,7 @@ c        stop
 c-end 3-20-06 addition
 
    5  CONTINUE
+ 6    continue
       ENDIF   !end hot jupiter skip loop
 
 
@@ -285,20 +291,24 @@ C
 C   H2O CONDENSATION IN THE STRATOSPHERE
 C   (RHCOLD IS THE ASSUMED RELATIVE HUMIDITY AT THE COLD TRAP)
 c dunno what to do here, I'll take it to be small
-      if (PLANET .EQ. 'EARTH') then 
+
+C
+      if(PLANET .eq. 'VENUS') then ! APL
+         rhcold = 0.001
+      else if (PLANET .EQ. 'EARTH') then 
       RHCOLD = 0.1   ! Jim had 0.1 ; what needs to be here is something that will give the right stratospheric H2O 3ppm
       else if (PLANET .EQ. 'MARS') then
 c      RHCOLD = 0.4  ! Jim had 0.1 ?  my standard is 0.4  <-Kevin words (mc - this seems wrong)
       RHCOLD = 0.17  ! from Kevin's Mars paper
 c       RHCOLD = 0.10  ! Jim had 0.1 ?  my standard is 0.4  <-Kevin words (mc - this seems wrong)
       endif   
-      DO 13 J=JT1,NZ
-        H2OCRT = RHCOLD * H2OSAT(J)
-        IF (USOL(LH2O,J) .LT. H2OCRT) GO TO 13
-        CONDEN(J) = CONFAC * (USOL(LH2O,J) - H2OCRT)   !this is saved in SATBLK to be printed out in output file
-        FVAL(LH2O,J) = FVAL(LH2O,J) - CONDEN(J)
-  13  CONTINUE
 
+         DO 13 J=JT1,NZ
+            H2OCRT = RHCOLD * H2OSAT(J)
+            IF (USOL(LH2O,J) .LT. H2OCRT) GO TO 13
+            CONDEN(J) = CONFAC * (USOL(LH2O,J) - H2OCRT) !this is saved in SATBLK to be printed out in output file
+            FVAL(LH2O,J) = FVAL(LH2O,J) - CONDEN(J)
+ 13      CONTINUE
 
 C
 C   H2SO4 CONDENSATION
@@ -422,7 +432,8 @@ C
       M = JCHEM(1,L)         !identifies first reactant of equation L
       K = JCHEM(2,L)         !second reactant
       DO 12 J=1,NZ
-         REACRAT(L,J) =  A(L,J)*D(M,J)*D(K,J)  !reaction rate*densities
+         REACRAT(L,J) =  A(L,J)*D(M,J)*D(K,J) !reaction rate*densities
+c         print *,chemj(1,l),chemj(2,l)
 c cm^3/mol/s * (mol/cm^3)^2 ->  mol/cm^3/s (i.e. rate units)
 
 C-mab:      IF(L.EQ.179) THEN For reaction rate debugging...

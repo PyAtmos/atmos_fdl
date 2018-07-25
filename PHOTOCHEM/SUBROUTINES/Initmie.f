@@ -204,8 +204,12 @@ C-   spherical particles
         else if (ihztype.eq.6.) then 
             root = 'PHOTOCHEM/DATA/MIE/f6/fractopts'
             print *,'ihztype 6: 0.05 um (Khare shifted to Hasenkopf)'
-        end if
+
+        else if (ihztype.eq.7.) then 
+            root = 'PHOTOCHEM/DATA/MIE/f7/fractopts'
+            print *,'ihztype 7: 0.05 um (Khare + Gavalin)'
          
+        end if         
         
       filenames=['0.001um.txt','0.002um.txt','0.003um.txt','0.004um.txt'
      $          ,'0.005um.txt','0.006um.txt','0.007um.txt','0.008um.txt'
@@ -259,7 +263,7 @@ C-GA we don't need to to the 'extend' thing for the fractals...
       CALL addpnt(x1,y1,kw,n1,                   biggest,zero)
 
       CALL inter2(nw+1,wl,yg1,n1,x1,y1,0) !inter2 is discrete grid points to bins
-
+      
       IF (ierr .NE. 0) THEN
          WRITE(*,*) ierr, ' ***Something wrong in Initmie***'
          STOP
