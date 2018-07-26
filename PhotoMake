@@ -21,7 +21,7 @@ FC = gfortran
 #FCFLAG = -g -fno-automatic -Wuninitialized -fbounds-check -O -ftrapv -Wall -I. -fdefault-integer-8 -fdefault-real-8
 
 #optimized (EWS - USE THIS FOR FAST CODE)
-FCFLAG = -O3 -fno-automatic -ftree-vectorize -fdefault-integer-8 -fdefault-real-8 -I. -g3
+FCFLAG = -O3 -fno-automatic -ftree-vectorize -fdefault-integer-8 -fdefault-real-8 -I. -g3 -std=legacy 
 #FCFLAG = -O3 -fno-automatic -ftree-vectorize -fdefault-integer-8 -fdefault-real-8 -I. -ffpe-trap=invalid
 
 #check arrays out of bounds
