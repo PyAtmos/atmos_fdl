@@ -1498,10 +1498,10 @@ C
       FNC(J) = 1. - FI(1,J) - FI(2,J)   ! Added initial FNC array c-rr 6/7/2012
       enddo
 
-c WJF edit to stop Clima after convergence
-      if(DIVFrms < 1.0E-3) then
-        exit
-      endif
+Cc WJF edit to stop Clima after convergence
+C      if(DIVFrms < 1.0E-3) then
+C        exit
+C      endif
 c end WJF edit
 
 ***************************************************************
